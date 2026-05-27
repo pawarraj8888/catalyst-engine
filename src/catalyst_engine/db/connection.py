@@ -29,7 +29,9 @@ def ensure_schema(conn: duckdb.DuckDBPyConnection) -> None:
     log.debug("schema_applied", path=str(_SCHEMA_PATH))
 
 
-def connect(path: Path | str | None = None, *, read_only: bool = False) -> duckdb.DuckDBPyConnection:
+def connect(
+    path: Path | str | None = None, *, read_only: bool = False
+) -> duckdb.DuckDBPyConnection:
     """Open a DuckDB connection and ensure schema exists.
 
     Parameters

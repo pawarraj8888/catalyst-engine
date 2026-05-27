@@ -123,7 +123,9 @@ def fetch_sec_ticker_map() -> dict[str, dict[str, str]]:
     return out
 
 
-def resolve_ciks(universe: Universe, ticker_map: dict[str, dict[str, str]] | None = None) -> Universe:
+def resolve_ciks(
+    universe: Universe, ticker_map: dict[str, dict[str, str]] | None = None
+) -> Universe:
     """Attach CIK + company name to each universe entry.
 
     Tickers without a CIK match are logged but NOT dropped — they remain in
