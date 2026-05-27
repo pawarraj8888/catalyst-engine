@@ -172,6 +172,33 @@ CREATE TABLE IF NOT EXISTS fda_events (
 );
 
 -- ------------------------------------------------------------------
+-- realized_moves — computed from prices + earnings, used as backtest labels
+-- ------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS realized_moves (
+    ticker              VARCHAR NOT NULL,
+    event_date          DATE NOT NULL,
+    pre_close_date      DATE,                       -- last trading day strictly before event
+    post_close_date_1d  DATE,                       -- first trading day strictly after event
+    post_close_date_5d  DATE,                       -- ~5 trading days after event
+    pre_close           DECIMAL(18, 4),
+    post_close_1d       DECIMAL(18, 4),
+    post_close_5d       DECIMAL(18, 4),
+    realized_move_1d    DECIMAL(10, 6),             -- (post_1d - pre) / pre, signed
+    realized_move_5d    DECIMAL(10, 6),
+    abs_move_1d         DECIMAL(10, 6),             -- |realized_move_1d|
+    trailing_median_8q  DECIMAL(10, 6),             -- median of abs_move_1d over prior 8 events
+    n_prior_events      INTEGER,                    -- how many prior events fed the median
+    move_ratio          DECIMAL(10, 4),             -- abs_move_1d / trailing_median_8q
+    as_of               TIMESTAMP NOT NULL,
+    computed_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (ticker, event_date, as_of)
+);
+
+CREATE INDEX IF NOT EXISTS idx_realized_moves_ticker ON realized_moves (ticker);
+CREATE INDEX IF NOT EXISTS idx_realized_moves_event_date ON realized_moves (event_date);
+
+
+-- ------------------------------------------------------------------
 -- ingestion_runs — observability: what ran, when, what came back
 -- ------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ingestion_runs (

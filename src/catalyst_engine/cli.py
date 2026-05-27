@@ -34,9 +34,11 @@ app = typer.Typer(no_args_is_help=True, add_completion=False)
 universe_app = typer.Typer(no_args_is_help=True, help="Universe management.")
 ingest_app = typer.Typer(no_args_is_help=True, help="Data ingestion pipelines.")
 backtest_app = typer.Typer(no_args_is_help=True, help="Backtest commands.")
+features_app = typer.Typer(no_args_is_help=True, help="Feature computation.")
 app.add_typer(universe_app, name="universe")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(backtest_app, name="backtest")
+app.add_typer(features_app, name="features")
 
 console = Console()
 log = get_logger(__name__)
@@ -325,6 +327,45 @@ def backtest_replay() -> None:
     """[Phase 3] Historical replay of catalyst scoring."""
     console.print("[yellow]Not yet implemented — Phase 3.[/yellow]")
     raise typer.Exit(2)
+
+
+# ---------------------------------------------------------------------------
+# features
+# ---------------------------------------------------------------------------
+
+
+@features_app.command("realized-moves")
+def features_realized_moves(
+    window: int = typer.Option(8, help="Rolling window size for trailing median"),
+) -> None:
+    """Compute realized moves for every historical earnings event.
+
+    Joins earnings_events x prices into the realized_moves table. This is
+    the label set the backtest reads from.
+    """
+    from catalyst_engine.features.realized_moves import compute_universe_moves
+
+    conn = connect()
+    try:
+        console.print(f"Computing realized moves (window={window})...")
+        n = compute_universe_moves(conn, only_with_actuals=True, window=window)
+
+        total = conn.execute("SELECT COUNT(*) FROM realized_moves").fetchone()
+        with_1d = conn.execute(
+            "SELECT COUNT(*) FROM realized_moves WHERE realized_move_1d IS NOT NULL"
+        ).fetchone()
+        with_median = conn.execute(
+            "SELECT COUNT(*) FROM realized_moves WHERE trailing_median_8q IS NOT NULL"
+        ).fetchone()
+
+        console.print(f"[green]{n} new rows written[/green]")
+        console.print(
+            f"[bold]realized_moves: {total[0] if total else 0} total, "
+            f"{with_1d[0] if with_1d else 0} with 1d move, "
+            f"{with_median[0] if with_median else 0} with trailing median[/bold]"
+        )
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":
