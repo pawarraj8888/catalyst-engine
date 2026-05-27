@@ -7,17 +7,15 @@ marked @pytest.mark.integration and is skipped by default.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import duckdb
 import pytest
 
 from catalyst_engine.data.edgar import (
-    FilingRecord,
     parse_submissions_to_records,
     upsert_filings,
 )
-
 
 # Synthetic but realistically shaped submissions payload
 SUBMISSIONS_FIXTURE = {
@@ -58,7 +56,7 @@ def test_parse_submissions_basic() -> None:
     assert r0.items == ["2.02", "9.01"]
     assert r0.ticker == "AAPL"
     assert r0.cik == "0000320193"
-    assert r0.filed_at == datetime(2025, 8, 1, 16, 31, 0, tzinfo=timezone.utc)
+    assert r0.filed_at == datetime(2025, 8, 1, 16, 31, 0, tzinfo=UTC)
     assert r0.primary_doc_url and r0.primary_doc_url.endswith("aapl-20250801.htm")
     assert "320193" in r0.primary_doc_url  # cik integer in path
 
@@ -75,7 +73,7 @@ def test_parse_submissions_filters_by_form() -> None:
 
 
 def test_parse_submissions_filters_by_since() -> None:
-    since = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    since = datetime(2025, 1, 1, tzinfo=UTC)
     records = parse_submissions_to_records(
         SUBMISSIONS_FIXTURE,
         ticker="AAPL",
@@ -103,9 +101,7 @@ def test_parse_submissions_empty_payload() -> None:
 
 def test_upsert_filings_idempotent(warehouse: duckdb.DuckDBPyConnection) -> None:
     """Calling upsert twice with the same records writes only once."""
-    records = parse_submissions_to_records(
-        SUBMISSIONS_FIXTURE, ticker="AAPL", cik="0000320193"
-    )
+    records = parse_submissions_to_records(SUBMISSIONS_FIXTURE, ticker="AAPL", cik="0000320193")
 
     n1 = upsert_filings(warehouse, records)
     assert n1 == 3
@@ -125,9 +121,7 @@ def test_upsert_filings_empty_list_is_noop(warehouse: duckdb.DuckDBPyConnection)
 
 def test_upsert_filings_sets_as_of_to_filed_at(warehouse: duckdb.DuckDBPyConnection) -> None:
     """PIT contract: as_of must equal filed_at for filings."""
-    records = parse_submissions_to_records(
-        SUBMISSIONS_FIXTURE, ticker="AAPL", cik="0000320193"
-    )
+    records = parse_submissions_to_records(SUBMISSIONS_FIXTURE, ticker="AAPL", cik="0000320193")
     upsert_filings(warehouse, records)
 
     rows = warehouse.execute(

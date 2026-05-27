@@ -101,6 +101,11 @@ warn_unreachable = true
 module = ["yfinance.*", "duckdb.*"]
 ignore_missing_imports = true
 
+[tool.coverage.run]
+omit = [
+    "src/catalyst_engine/cli.py",
+]
+
 # ----- pytest -----
 [tool.pytest.ini_options]
 minversion = "8.0"

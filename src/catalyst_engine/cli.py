@@ -14,7 +14,7 @@ catalyst backtest replay       Run historical replay (Phase 3)
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import typer
 from rich.console import Console
@@ -60,7 +60,7 @@ def universe_sync() -> None:
     ticker_map = fetch_sec_ticker_map()
     resolved = resolve_ciks(universe, ticker_map=ticker_map)
 
-    today = datetime.now(timezone.utc)
+    today = datetime.now(UTC)
     conn = connect()
     try:
         # Wipe and reload — universe is small, simplest semantics
@@ -118,23 +118,19 @@ def ingest_edgar(
     """Pull recent SEC filings for the universe."""
     settings = get_settings()
     if "@" not in settings.sec_user_agent:
-        console.print(
-            "[red]SEC_USER_AGENT must include an email. Set it in .env first.[/red]"
-        )
+        console.print("[red]SEC_USER_AGENT must include an email. Set it in .env first.[/red]")
         raise typer.Exit(1)
 
     conn = connect()
     try:
-        entries = conn.execute(
-            "SELECT ticker, cik FROM universe WHERE cik IS NOT NULL"
-        ).fetchall()
+        entries = conn.execute("SELECT ticker, cik FROM universe WHERE cik IS NOT NULL").fetchall()
         if not entries:
             console.print(
                 "[yellow]No universe rows with CIK. Run `catalyst universe sync` first.[/yellow]"
             )
             raise typer.Exit(1)
 
-        since = datetime.now(timezone.utc) - timedelta(days=days)
+        since = datetime.now(UTC) - timedelta(days=days)
         filing_types = tuple(f.strip() for f in forms.split(","))
 
         console.print(
@@ -142,7 +138,7 @@ def ingest_edgar(
         )
         results = ingest_universe_filings(
             conn,
-            universe_entries=[(t, c) for t, c in entries],
+            universe_entries=list(entries),
             filing_types=filing_types,
             since=since,
         )
@@ -195,9 +191,7 @@ def ingest_earnings(
             "SELECT ticker FROM universe WHERE cik IS NOT NULL ORDER BY ticker"
         ).fetchall()
         if not rows:
-            console.print(
-                "[yellow]Universe is empty. Run `catalyst universe sync` first.[/yellow]"
-            )
+            console.print("[yellow]Universe is empty. Run `catalyst universe sync` first.[/yellow]")
             raise typer.Exit(1)
         tickers = [r[0] for r in rows]
 
@@ -219,7 +213,7 @@ def ingest_earnings(
         total_new_history = 0
         if not skip_history:
             console.print(
-                f"Pulling surprise history: {len(tickers)} tickers × ~{history_quarters} quarters"
+                f"Pulling surprise history: {len(tickers)} tickers x ~{history_quarters} quarters"
             )
             results = ingest_surprise_history(
                 conn, tickers=tickers, limit_per_ticker=history_quarters
@@ -241,10 +235,77 @@ def ingest_earnings(
 
 
 @ingest_app.command("prices")
-def ingest_prices() -> None:
-    """[Phase 1 next] Refresh daily OHLCV via yfinance."""
-    console.print("[yellow]Not yet implemented — Phase 1 next step.[/yellow]")
-    raise typer.Exit(2)
+def ingest_prices(
+    years: int = typer.Option(5, help="Lookback in years"),
+    batch_size: int = typer.Option(50, help="Tickers per yfinance bulk call"),
+) -> None:
+    """Refresh daily OHLCV via yfinance for the entire universe."""
+    from datetime import date as _date
+    from datetime import timedelta as _td
+
+    from catalyst_engine.data.prices import ingest_prices_for_universe
+
+    conn = connect()
+    try:
+        rows = conn.execute(
+            "SELECT ticker FROM universe WHERE cik IS NOT NULL ORDER BY ticker"
+        ).fetchall()
+        if not rows:
+            console.print("[yellow]Universe empty. Run `catalyst universe sync` first.[/yellow]")
+            raise typer.Exit(1)
+        tickers = [r[0] for r in rows]
+
+        start = _date.today() - _td(days=365 * years)
+        console.print(
+            f"Pulling daily OHLCV: {len(tickers)} tickers, "
+            f"{start} → today, batch_size={batch_size}"
+        )
+        n = ingest_prices_for_universe(conn, tickers=tickers, start=start, batch_size=batch_size)
+
+        total = conn.execute("SELECT COUNT(*) FROM prices").fetchone()
+        console.print(f"[green]Prices: {n} new rows[/green]")
+        console.print(f"[bold]Total price rows in warehouse: {total[0] if total else 0}[/bold]")
+    finally:
+        conn.close()
+
+
+@ingest_app.command("earnings-backfill")
+def ingest_earnings_backfill() -> None:
+    """Deepen earnings history from yfinance (~8-12 quarters per ticker).
+
+    Use this after `catalyst ingest earnings` to supplement Finnhub's
+    free-tier 4-quarter cap. Writes to the same `earnings_events` table.
+    """
+    from catalyst_engine.data.prices import ingest_yf_earnings_backfill
+
+    conn = connect()
+    try:
+        rows = conn.execute(
+            "SELECT ticker FROM universe WHERE cik IS NOT NULL ORDER BY ticker"
+        ).fetchall()
+        if not rows:
+            console.print("[yellow]Universe empty. Run `catalyst universe sync` first.[/yellow]")
+            raise typer.Exit(1)
+        tickers = [r[0] for r in rows]
+
+        console.print(f"Backfilling earnings history from yfinance for {len(tickers)} tickers...")
+        console.print("[dim]This may take 3-5 minutes — yfinance scrapes Yahoo.[/dim]")
+        results = ingest_yf_earnings_backfill(conn, tickers=tickers)
+
+        successes = sum(1 for v in results.values() if v >= 0)
+        failures = sum(1 for v in results.values() if v < 0)
+        total_new = sum(v for v in results.values() if v > 0)
+
+        total = conn.execute("SELECT COUNT(*) FROM earnings_events").fetchone()
+        console.print(
+            f"[green]Backfill: {successes} success, {failures} failed, "
+            f"{total_new} new rows[/green]"
+        )
+        console.print(
+            f"[bold]Total earnings events in warehouse: {total[0] if total else 0}[/bold]"
+        )
+    finally:
+        conn.close()
 
 
 @ingest_app.command("options-snapshot")

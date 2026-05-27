@@ -13,7 +13,7 @@ fail. This is non-negotiable.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 import duckdb
 import pytest
@@ -24,7 +24,6 @@ from catalyst_engine.utils.pit import (
     enter_pit,
     pit_query,
 )
-
 
 # ----------------------------------------------------------------------------
 # PITContext construction
@@ -50,14 +49,14 @@ def test_pit_context_at_normalizes_to_utc() -> None:
     est = timezone(timedelta(hours=-5))
     dt = datetime(2025, 6, 1, 9, 0, tzinfo=est)
     ctx = PITContext.at(dt)
-    assert ctx.as_of.tzinfo is timezone.utc
+    assert ctx.as_of.tzinfo is UTC
     assert ctx.as_of.hour == 14
 
 
 @pytest.mark.pit
 def test_pit_context_now_is_utc() -> None:
     ctx = PITContext.now()
-    assert ctx.as_of.tzinfo is timezone.utc
+    assert ctx.as_of.tzinfo is UTC
 
 
 # ----------------------------------------------------------------------------
@@ -83,11 +82,9 @@ def test_enter_pit_sets_then_clears() -> None:
 @pytest.mark.pit
 def test_nested_pit_contexts_raise() -> None:
     outer = PITContext.now()
-    inner = PITContext.at(datetime(2025, 1, 1, tzinfo=timezone.utc))
-    with enter_pit(outer):
-        with pytest.raises(RuntimeError, match="cannot be nested"):
-            with enter_pit(inner):
-                pass
+    inner = PITContext.at(datetime(2025, 1, 1, tzinfo=UTC))
+    with enter_pit(outer), pytest.raises(RuntimeError, match="cannot be nested"), enter_pit(inner):
+        pass
 
 
 # ----------------------------------------------------------------------------
@@ -98,9 +95,8 @@ def test_nested_pit_contexts_raise() -> None:
 @pytest.mark.pit
 def test_pit_query_requires_as_of_token() -> None:
     conn = duckdb.connect(":memory:")
-    with enter_pit(PITContext.now()):
-        with pytest.raises(ValueError, match="requires `{AS_OF}`"):
-            pit_query(conn, "SELECT 1")  # no {AS_OF} → forbidden
+    with enter_pit(PITContext.now()), pytest.raises(ValueError, match=r"requires `{AS_OF}`"):
+        pit_query(conn, "SELECT 1")  # no {AS_OF} → forbidden
 
 
 @pytest.mark.pit
@@ -111,8 +107,8 @@ def test_pit_query_filters_future_rows(warehouse: duckdb.DuckDBPyConnection) -> 
     is leaking data.
     """
     # Insert two universe rows with different as_of timestamps
-    past_as_of = datetime(2025, 1, 1, tzinfo=timezone.utc)
-    future_as_of = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    past_as_of = datetime(2025, 1, 1, tzinfo=UTC)
+    future_as_of = datetime(2026, 1, 1, tzinfo=UTC)
 
     warehouse.execute(
         """
@@ -125,7 +121,7 @@ def test_pit_query_filters_future_rows(warehouse: duckdb.DuckDBPyConnection) -> 
     )
 
     # Query at a PIT between the two
-    mid_pit = datetime(2025, 6, 1, tzinfo=timezone.utc)
+    mid_pit = datetime(2025, 6, 1, tzinfo=UTC)
     with enter_pit(PITContext.at(mid_pit)):
         rows = pit_query(
             warehouse,
@@ -142,8 +138,8 @@ def test_pit_query_allows_override(warehouse: duckdb.DuckDBPyConnection) -> None
 
     This is intentional for tests and for explicit retrospective queries.
     """
-    early = datetime(2024, 1, 1, tzinfo=timezone.utc)
-    late = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    early = datetime(2024, 1, 1, tzinfo=UTC)
+    late = datetime(2025, 1, 1, tzinfo=UTC)
 
     warehouse.execute(
         """
@@ -155,9 +151,7 @@ def test_pit_query_allows_override(warehouse: duckdb.DuckDBPyConnection) -> None
 
     # Active PIT is "before" the row's as_of
     with enter_pit(PITContext.at(early)):
-        rows_default = pit_query(
-            warehouse, "SELECT ticker FROM universe WHERE as_of <= {AS_OF}"
-        )
+        rows_default = pit_query(warehouse, "SELECT ticker FROM universe WHERE as_of <= {AS_OF}")
         assert rows_default == []
 
         # Override to "after" — should see it

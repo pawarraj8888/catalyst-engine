@@ -37,7 +37,7 @@ import asyncio
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -216,7 +216,7 @@ def parse_submissions_to_records(
             # Format: "2024-09-12T16:32:18.000Z"
             filed_at = datetime.fromisoformat(accepted_str.replace("Z", "+00:00"))
         else:
-            filed_at = datetime.fromisoformat(filing_dates[i]).replace(tzinfo=timezone.utc)
+            filed_at = datetime.fromisoformat(filing_dates[i]).replace(tzinfo=UTC)
 
         if since is not None and filed_at < since:
             continue
@@ -229,7 +229,7 @@ def parse_submissions_to_records(
 
         period_str = periods[i] if i < len(periods) and periods[i] else None
         period_of_report = (
-            datetime.fromisoformat(period_str).replace(tzinfo=timezone.utc) if period_str else None
+            datetime.fromisoformat(period_str).replace(tzinfo=UTC) if period_str else None
         )
 
         acc_nodash = acc.replace("-", "")

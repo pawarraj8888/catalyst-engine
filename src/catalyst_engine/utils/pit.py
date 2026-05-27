@@ -19,11 +19,12 @@ If you find yourself writing `WHERE as_of <= ?` by hand, use this module instead
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Iterator
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import duckdb
@@ -51,12 +52,12 @@ class PITContext:
         """Construct from a datetime, normalizing to UTC."""
         if dt.tzinfo is None:
             raise ValueError("Naive datetime is not allowed. Specify a timezone.")
-        return cls(as_of=dt.astimezone(timezone.utc))
+        return cls(as_of=dt.astimezone(UTC))
 
     @classmethod
     def now(cls) -> PITContext:
         """Construct with the current UTC moment."""
-        return cls(as_of=datetime.now(timezone.utc))
+        return cls(as_of=datetime.now(UTC))
 
 
 # Process-wide current PIT. Set by enter_pit(); read by pit_query().
@@ -75,9 +76,7 @@ def enter_pit(ctx: PITContext) -> Iterator[PITContext]:
     Nesting raises — backtests should establish exactly one PIT per query.
     """
     if _current_pit.get() is not None:
-        raise RuntimeError(
-            "PIT contexts cannot be nested. The outer context is already active."
-        )
+        raise RuntimeError("PIT contexts cannot be nested. The outer context is already active.")
     token = _current_pit.set(ctx)
     try:
         yield ctx

@@ -6,7 +6,7 @@ hits Finnhub live is skipped by default.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import duckdb
 import pytest
@@ -106,7 +106,7 @@ def test_coerce_float_handles_messy_inputs() -> None:
 
 
 def test_parse_calendar_basic_shape() -> None:
-    ingest_time = datetime(2026, 5, 27, 12, 0, tzinfo=timezone.utc)
+    ingest_time = datetime(2026, 5, 27, 12, 0, tzinfo=UTC)
     records = parse_calendar_response(CALENDAR_FIXTURE, as_of=ingest_time)
     # AAPL + MSFT + OUTOFUNIVERSE survive; "" symbol and bad date are dropped
     tickers = [r.ticker for r in records]
@@ -114,7 +114,7 @@ def test_parse_calendar_basic_shape() -> None:
 
 
 def test_parse_calendar_filters_universe() -> None:
-    ingest_time = datetime(2026, 5, 27, 12, 0, tzinfo=timezone.utc)
+    ingest_time = datetime(2026, 5, 27, 12, 0, tzinfo=UTC)
     records = parse_calendar_response(
         CALENDAR_FIXTURE, as_of=ingest_time, universe_tickers={"AAPL", "MSFT"}
     )
@@ -126,7 +126,7 @@ def test_parse_calendar_as_of_semantics() -> None:
 
     This is the PIT contract spelled out in the module docstring.
     """
-    ingest_time = datetime(2026, 5, 27, 12, 0, tzinfo=timezone.utc)
+    ingest_time = datetime(2026, 5, 27, 12, 0, tzinfo=UTC)
     records = parse_calendar_response(
         CALENDAR_FIXTURE, as_of=ingest_time, universe_tickers={"AAPL", "MSFT"}
     )
@@ -135,7 +135,7 @@ def test_parse_calendar_as_of_semantics() -> None:
 
     # AAPL has eps_actual → historical → as_of pinned to event_date
     assert aapl.eps_actual is not None
-    assert aapl.as_of == datetime(2025, 8, 1, tzinfo=timezone.utc)
+    assert aapl.as_of == datetime(2025, 8, 1, tzinfo=UTC)
 
     # MSFT has no actual → forward-looking → as_of = ingestion time
     assert msft.eps_actual is None
@@ -143,7 +143,7 @@ def test_parse_calendar_as_of_semantics() -> None:
 
 
 def test_parse_calendar_extracts_fields() -> None:
-    ingest_time = datetime(2026, 5, 27, 12, 0, tzinfo=timezone.utc)
+    ingest_time = datetime(2026, 5, 27, 12, 0, tzinfo=UTC)
     records = parse_calendar_response(
         CALENDAR_FIXTURE, as_of=ingest_time, universe_tickers={"AAPL"}
     )
@@ -158,7 +158,7 @@ def test_parse_calendar_extracts_fields() -> None:
 
 
 def test_parse_calendar_handles_empty_input() -> None:
-    ingest_time = datetime(2026, 5, 27, tzinfo=timezone.utc)
+    ingest_time = datetime(2026, 5, 27, tzinfo=UTC)
     assert parse_calendar_response([], as_of=ingest_time) == []
 
 
@@ -176,9 +176,7 @@ def test_parse_surprises_returns_one_record_per_period() -> None:
 def test_parse_surprises_as_of_equals_event_date() -> None:
     records = parse_surprise_response(SURPRISE_FIXTURE, ticker="AAPL")
     for r in records:
-        expected = datetime.combine(
-            r.event_date, datetime.min.time(), tzinfo=timezone.utc
-        )
+        expected = datetime.combine(r.event_date, datetime.min.time(), tzinfo=UTC)
         assert r.as_of == expected
 
 
@@ -221,7 +219,7 @@ def _make_event(
         eps_actual=eps_actual,
         revenue_est=None,
         revenue_actual=None,
-        as_of=as_of or datetime(2025, 8, 1, tzinfo=timezone.utc),
+        as_of=as_of or datetime(2025, 8, 1, tzinfo=UTC),
     )
 
 
@@ -252,15 +250,9 @@ def test_upsert_preserves_estimate_revisions(
     """
     from decimal import Decimal
 
-    e1 = _make_event(
-        as_of=datetime(2025, 7, 1, tzinfo=timezone.utc), eps_est=1.30, eps_actual=None
-    )
-    e2 = _make_event(
-        as_of=datetime(2025, 7, 15, tzinfo=timezone.utc), eps_est=1.33, eps_actual=None
-    )
-    e3 = _make_event(
-        as_of=datetime(2025, 7, 28, tzinfo=timezone.utc), eps_est=1.35, eps_actual=None
-    )
+    e1 = _make_event(as_of=datetime(2025, 7, 1, tzinfo=UTC), eps_est=1.30, eps_actual=None)
+    e2 = _make_event(as_of=datetime(2025, 7, 15, tzinfo=UTC), eps_est=1.33, eps_actual=None)
+    e3 = _make_event(as_of=datetime(2025, 7, 28, tzinfo=UTC), eps_est=1.35, eps_actual=None)
     assert upsert_earnings_events(warehouse, [e1, e2, e3]) == 3
 
     rows = warehouse.execute(
@@ -317,3 +309,113 @@ def test_live_finnhub_calendar() -> None:
             client, FinnhubRateLimiter(), start=today, end=today + _td(days=14)
         )
         assert isinstance(entries, list)
+
+
+# ---------------------------------------------------------------------------
+# Orchestration tests (mock httpx; no network)
+# ---------------------------------------------------------------------------
+
+
+def test_ingest_calendar_window_chunks_and_inserts(
+    warehouse: duckdb.DuckDBPyConnection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ingest_calendar_window should call the API across multiple chunks
+    and persist all parsed records to the warehouse."""
+    from datetime import date as _date
+
+    from catalyst_engine.data import earnings as earnings_module
+
+    # Track which chunks were requested
+    calls: list[tuple[str, str]] = []
+
+    def fake_get_json(client, path, params, limiter):  # type: ignore[no-untyped-def]
+        calls.append((params["from"], params["to"]))
+        return {
+            "earningsCalendar": [
+                {
+                    "symbol": "AAPL",
+                    "date": params["from"],  # one event per chunk for simplicity
+                    "hour": "amc",
+                    "epsEstimate": 1.0,
+                    "epsActual": None,
+                    "quarter": 3,
+                    "year": 2026,
+                }
+            ]
+        }
+
+    # Patch the API client + JSON fetcher
+    monkeypatch.setattr(earnings_module, "_get_json", fake_get_json)
+    monkeypatch.setattr(earnings_module, "_build_client", lambda: _NoOpClient())
+
+    n = earnings_module.ingest_calendar_window(
+        warehouse,
+        start=_date(2026, 6, 1),
+        end=_date(2026, 8, 30),  # 91 days → 4 chunks at chunk_days=30
+        chunk_days=30,
+    )
+
+    # 4 API calls (4 chunks) but some may dedupe; we expect at least 1 write
+    assert len(calls) == 4
+    assert n >= 1
+    # Confirm warehouse has the rows
+    count = warehouse.execute("SELECT COUNT(*) FROM earnings_events").fetchone()
+    assert count is not None and count[0] >= 1
+
+
+def test_ingest_surprise_history_handles_errors(
+    warehouse: duckdb.DuckDBPyConnection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ticker that errors should land as -1 in results, not crash the run."""
+    import httpx
+
+    from catalyst_engine.data import earnings as earnings_module
+
+    def fake_get_json(client, path, params, limiter):  # type: ignore[no-untyped-def]
+        if params["symbol"] == "BAD":
+            raise httpx.HTTPError("boom")
+        return [
+            {
+                "period": "2025-08-01",
+                "actual": 1.41,
+                "estimate": 1.35,
+                "quarter": 3,
+                "year": 2025,
+            }
+        ]
+
+    monkeypatch.setattr(earnings_module, "_get_json", fake_get_json)
+    monkeypatch.setattr(earnings_module, "_build_client", lambda: _NoOpClient())
+
+    results = earnings_module.ingest_surprise_history(warehouse, tickers=["AAPL", "BAD", "MSFT"])
+    assert results["AAPL"] == 1
+    assert results["BAD"] == -1
+    assert results["MSFT"] == 1
+
+
+def test_finnhub_rate_limiter_smoke() -> None:
+    """Limiter shouldn't crash; first call shouldn't sleep."""
+    import time as _time
+
+    from catalyst_engine.data.earnings import FinnhubRateLimiter
+
+    limiter = FinnhubRateLimiter(calls_per_minute=600)  # fast
+    t0 = _time.monotonic()
+    limiter.wait()  # first call
+    limiter.wait()  # second call should sleep ~0.1s
+    elapsed = _time.monotonic() - t0
+    # Should be at least the minimum interval between calls
+    assert elapsed >= 0.05
+
+
+class _NoOpClient:
+    """Minimal stand-in for httpx.Client in mocked tests."""
+
+    def __enter__(self) -> _NoOpClient:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def get(self, *args: object, **kwargs: object) -> object:  # pragma: no cover
+        raise RuntimeError("should be patched in tests")

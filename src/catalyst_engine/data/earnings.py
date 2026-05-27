@@ -37,7 +37,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -223,7 +223,7 @@ def parse_calendar_response(
         # (the print was observable from that day). Otherwise, this is a
         # forward-looking estimate, as_of is when we observed it.
         row_as_of = (
-            datetime.combine(event_date, datetime.min.time(), tzinfo=timezone.utc)
+            datetime.combine(event_date, datetime.min.time(), tzinfo=UTC)
             if eps_actual is not None
             else as_of
         )
@@ -300,7 +300,7 @@ def parse_surprise_response(
         actual = _coerce_float(raw.get("actual"))
         estimate = _coerce_float(raw.get("estimate"))
 
-        as_of = datetime.combine(event_date, datetime.min.time(), tzinfo=timezone.utc)
+        as_of = datetime.combine(event_date, datetime.min.time(), tzinfo=UTC)
 
         out.append(
             EarningsEvent(
@@ -323,9 +323,7 @@ def parse_surprise_response(
 # ---------------------------------------------------------------------------
 
 
-def upsert_earnings_events(
-    conn: duckdb.DuckDBPyConnection, records: list[EarningsEvent]
-) -> int:
+def upsert_earnings_events(conn: duckdb.DuckDBPyConnection, records: list[EarningsEvent]) -> int:
     """Insert records. Idempotent on (ticker, event_date, as_of).
 
     Returns rows actually written. Same logical event with a later `as_of`
@@ -345,7 +343,7 @@ def upsert_earnings_events(
         """Tz-aware → UTC-naive for DuckDB TIMESTAMP storage."""
         if ts.tzinfo is None:
             return ts
-        return ts.astimezone(timezone.utc).replace(tzinfo=None)
+        return ts.astimezone(UTC).replace(tzinfo=None)
 
     # Dedupe within batch on the storage key
     seen: set[tuple[str, date, datetime]] = set()
@@ -369,9 +367,7 @@ def upsert_earnings_events(
     ).fetchall()
     existing = {(row[0], row[1], row[2]) for row in existing_rows}
 
-    to_insert = [
-        (r, ts) for r, ts in deduped if (r.ticker, r.event_date, ts) not in existing
-    ]
+    to_insert = [(r, ts) for r, ts in deduped if (r.ticker, r.event_date, ts) not in existing]
     if not to_insert:
         return 0
 
@@ -428,7 +424,7 @@ def ingest_calendar_window(
     Returns total new rows written.
     """
     limiter = FinnhubRateLimiter()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     total_new = 0
 
     with _build_client() as client:
@@ -436,9 +432,7 @@ def ingest_calendar_window(
         while cursor <= end:
             chunk_end = min(cursor + timedelta(days=chunk_days - 1), end)
             entries = fetch_calendar(client, limiter, start=cursor, end=chunk_end)
-            records = parse_calendar_response(
-                entries, as_of=now, universe_tickers=universe_tickers
-            )
+            records = parse_calendar_response(entries, as_of=now, universe_tickers=universe_tickers)
             total_new += upsert_earnings_events(conn, records)
             cursor = chunk_end + timedelta(days=1)
 
