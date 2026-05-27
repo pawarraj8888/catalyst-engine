@@ -36,11 +36,13 @@ ingest_app = typer.Typer(no_args_is_help=True, help="Data ingestion pipelines.")
 backtest_app = typer.Typer(no_args_is_help=True, help="Backtest commands.")
 features_app = typer.Typer(no_args_is_help=True, help="Feature computation.")
 data_app = typer.Typer(no_args_is_help=True, help="Data quality tools.")
+live_app = typer.Typer(no_args_is_help=True, help="Live calls loop.")
 app.add_typer(universe_app, name="universe")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(backtest_app, name="backtest")
 app.add_typer(features_app, name="features")
 app.add_typer(data_app, name="data")
+app.add_typer(live_app, name="live")
 
 console = Console()
 log = get_logger(__name__)
@@ -597,6 +599,104 @@ def data_clear_derived(
             console.print("\nRe-run with --apply to actually delete.")
     finally:
         conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Live calls loop
+# ---------------------------------------------------------------------------
+
+
+@live_app.command("scan")
+def live_scan(
+    horizon: int = typer.Option(14, help="Look ahead this many days for upcoming events."),
+    min_score: float = typer.Option(
+        -999.0, help="Only log calls with score >= this. Default: log everything."
+    ),
+) -> None:
+    """Score upcoming catalysts and append new calls to live_log/calls.csv.
+
+    Idempotent on (ticker, event_date) - re-running won't duplicate rows.
+    Typically run once per weekday morning via GitHub Actions cron.
+    """
+    from catalyst_engine.live import scan_and_log
+    from catalyst_engine.scoring.scorer import load_scoring_config
+
+    config = load_scoring_config()
+    conn = connect()
+    try:
+        ms = None if min_score <= -999.0 else min_score
+        n_new, n_skipped = scan_and_log(
+            conn,
+            config=config,
+            horizon_days=horizon,
+            min_score=ms,
+        )
+        console.print(
+            f"[green]Logged {n_new} new calls[/green] " f"(skipped {n_skipped} already-logged)"
+        )
+    finally:
+        conn.close()
+
+
+@live_app.command("resolve")
+def live_resolve() -> None:
+    """Fill in realized outcomes for PENDING calls whose event_date has passed.
+
+    Computes the realized 1-day move, classifies HIT/MISS/INVALIDATED, and
+    writes a post-mortem markdown file for non-HIT outcomes.
+    Typically run once per weekday evening via GitHub Actions cron.
+    """
+    from catalyst_engine.live import resolve_pending_calls
+
+    conn = connect()
+    try:
+        stats = resolve_pending_calls(conn)
+        console.print(
+            f"[green]Resolved {stats['n_resolved']} calls[/green]: "
+            f"{stats['n_hit']} HIT, {stats['n_miss']} MISS, "
+            f"{stats['n_invalidated']} INVALIDATED. "
+            f"{stats['n_pending_remaining']} still pending."
+        )
+    finally:
+        conn.close()
+
+
+@live_app.command("status")
+def live_status() -> None:
+    """Print a snapshot of the live track record."""
+    from rich.table import Table
+
+    from catalyst_engine.live import compute_status
+
+    status = compute_status()
+    console.print(f"[bold]Live calls log:[/bold] {status.n_total} total")
+    console.print(f"  Pending:     {status.n_pending}")
+    console.print(f"  Resolved:    {status.n_resolved}")
+    console.print(f"    Hits:      {status.n_hits}")
+    console.print(f"    Misses:    {status.n_misses}")
+    console.print(f"  Invalidated: {status.n_invalidated}")
+    if status.hit_rate_pct is not None:
+        console.print(f"  [bold]Hit rate:    {status.hit_rate_pct:.1f}%[/bold]")
+        if status.n_resolved < 30:
+            console.print(
+                f"  [yellow]Note: weights not trusted until N>=30 "
+                f"(currently {status.n_resolved})[/yellow]"
+            )
+    if status.last_scan:
+        console.print(f"  Last scan:   {status.last_scan}")
+
+    if any(b["n"] > 0 for b in status.by_bucket):
+        table = Table(title="\nResolved calls by score bucket")
+        table.add_column("Bucket")
+        table.add_column("N", justify="right")
+        table.add_column("Hits", justify="right")
+        table.add_column("Hit rate", justify="right")
+        for b in status.by_bucket:
+            if b["n"] == 0:
+                continue
+            rate = f"{b['hit_rate_pct']:.1f}%" if b["hit_rate_pct"] is not None else "n/a"
+            table.add_row(b["label"], str(b["n"]), str(b["hits"]), rate)
+        console.print(table)
 
 
 if __name__ == "__main__":

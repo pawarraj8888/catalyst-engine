@@ -1,5 +1,31 @@
-timestamp,ticker,catalyst_type,event_date,score,thesis,trade_structure,kill_criteria,outcome,realized_move,implied_move,notes
-# Every call gets one row. Append-only. Never edit historical rows.
-# `outcome` is filled after the event: WIN | LOSS | NEUTRAL | INVALIDATED
-# `realized_move` is the 1-day move (negative for downside)
-# Post-mortems live in postmortems/<YYYY-MM-DD>-<ticker>.md
+timestamp,schema_version,ticker,catalyst_type,event_date,score,rules_fired,score_components,trailing_baseline_pct,outcome,realized_move_pct,abs_move_pct,move_ratio,resolved_at,note
+2026-05-27T10:53:13+00:00,1,CRM,earnings,2026-05-27,3.50,vol_compression_3q|vol_compression_severe|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_compression_3q"": 1.5, ""vol_compression_severe"": 1.5}",1.0583,PENDING,,,,,
+2026-05-27T10:53:13+00:00,1,MRVL,earnings,2026-05-27,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.7287,PENDING,,,,,
+2026-05-27T10:53:13+00:00,1,SNOW,earnings,2026-05-27,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.4670,PENDING,,,,,
+2026-05-27T10:53:13+00:00,1,SNPS,earnings,2026-05-27,2.00,vol_saturation_3q|vol_saturation_extreme|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_saturation_3q"": 1.0, ""vol_saturation_extreme"": 0.5}",1.4895,PENDING,,,,,
+2026-05-27T10:53:13+00:00,1,COST,earnings,2026-05-28,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.0534,PENDING,,,,,
+2026-05-27T10:53:13+00:00,1,DELL,earnings,2026-05-28,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.2956,PENDING,,,,,
+2026-05-27T10:53:13+00:00,1,DLTR,earnings,2026-05-28,1.50,has_history|has_deep_history|high_vol_baseline|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""high_vol_baseline"": 1.0, ""insider_silent"": -0.5}",6.6479,PENDING,,,,,
+2026-05-27T10:53:13+00:00,1,ESTC,earnings,2026-05-28,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",2.0036,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,MDB,earnings,2026-05-28,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",2.8020,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,NTAP,earnings,2026-05-28,1.50,vol_saturation_3q|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_saturation_3q"": 1.0}",0.8800,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,OKTA,earnings,2026-05-28,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.2512,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,PATH,earnings,2026-05-28,2.50,vol_compression_3q|vol_saturation_extreme|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_compression_3q"": 1.5, ""vol_saturation_extreme"": 0.5}",0.6601,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,S,earnings,2026-05-28,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",2.0959,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,HPE,earnings,2026-06-01,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.7357,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,DG,earnings,2026-06-02,1.50,has_history|has_deep_history|high_vol_baseline|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""high_vol_baseline"": 1.0, ""insider_silent"": -0.5}",7.4778,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,GTLB,earnings,2026-06-02,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.2295,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,PANW,earnings,2026-06-02,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.5536,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,AVGO,earnings,2026-06-03,2.00,vol_compression_3q|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_compression_3q"": 1.5}",2.2102,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,CRWD,earnings,2026-06-03,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",1.8159,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,LULU,earnings,2026-06-03,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",0.9877,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,MDT,earnings,2026-06-03,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",3.7359,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,RH,earnings,2026-06-10,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",3.3572,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,ADBE,earnings,2026-06-11,1.50,vol_saturation_3q|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_saturation_3q"": 1.0}",0.5335,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,ORCL,earnings,2026-06-16,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",0.9924,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,ACN,earnings,2026-06-18,1.50,has_history|has_deep_history|high_vol_baseline|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""high_vol_baseline"": 1.0, ""insider_silent"": -0.5}",6.9600,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,KR,earnings,2026-06-18,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",3.1837,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,FDX,earnings,2026-06-23,2.00,vol_compression_3q|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_compression_3q"": 1.5}",0.5246,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,GIS,earnings,2026-06-23,0.50,has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5}",2.5577,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,MU,earnings,2026-06-23,2.00,vol_compression_3q|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_compression_3q"": 1.5}",1.4020,PENDING,,,,,
+2026-05-27T10:53:14+00:00,1,NKE,earnings,2026-06-24,2.00,vol_saturation_3q|vol_saturation_extreme|has_history|has_deep_history|insider_silent,"{""has_deep_history"": 0.5, ""has_history"": 0.5, ""insider_silent"": -0.5, ""vol_saturation_3q"": 1.0, ""vol_saturation_extreme"": 0.5}",0.6872,PENDING,,,,,
