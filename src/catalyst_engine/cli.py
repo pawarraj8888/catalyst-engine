@@ -159,10 +159,85 @@ def ingest_edgar(
 
 
 @ingest_app.command("earnings")
-def ingest_earnings() -> None:
-    """[Phase 1 next] Refresh earnings calendar via Finnhub."""
-    console.print("[yellow]Not yet implemented — Phase 1 next step.[/yellow]")
-    raise typer.Exit(2)
+def ingest_earnings(
+    calendar_days: int = typer.Option(
+        90, help="Forward calendar window in days (upcoming earnings)"
+    ),
+    history_quarters: int = typer.Option(
+        20, help="Historical surprise depth per ticker (max ~20 on free tier)"
+    ),
+    skip_calendar: bool = typer.Option(False, help="Skip calendar refresh"),
+    skip_history: bool = typer.Option(False, help="Skip surprise history pull"),
+) -> None:
+    """Refresh earnings calendar (forward) and surprise history (backward).
+
+    Uses Finnhub. Requires FINNHUB_API_KEY in .env.
+    """
+    from datetime import date as _date
+    from datetime import timedelta as _td
+
+    from catalyst_engine.data.earnings import (
+        ingest_calendar_window,
+        ingest_surprise_history,
+    )
+
+    settings = get_settings()
+    if not settings.finnhub_api_key:
+        console.print(
+            "[red]FINNHUB_API_KEY is empty. Get a free key at "
+            "https://finnhub.io/register and set it in .env.[/red]"
+        )
+        raise typer.Exit(1)
+
+    conn = connect()
+    try:
+        rows = conn.execute(
+            "SELECT ticker FROM universe WHERE cik IS NOT NULL ORDER BY ticker"
+        ).fetchall()
+        if not rows:
+            console.print(
+                "[yellow]Universe is empty. Run `catalyst universe sync` first.[/yellow]"
+            )
+            raise typer.Exit(1)
+        tickers = [r[0] for r in rows]
+
+        total_new_calendar = 0
+        if not skip_calendar:
+            today = _date.today()
+            console.print(
+                f"Pulling earnings calendar: {today} → {today + _td(days=calendar_days)} "
+                f"(universe filter: {len(tickers)} tickers)"
+            )
+            total_new_calendar = ingest_calendar_window(
+                conn,
+                start=today,
+                end=today + _td(days=calendar_days),
+                universe_tickers=set(tickers),
+            )
+            console.print(f"[green]Calendar: {total_new_calendar} new rows[/green]")
+
+        total_new_history = 0
+        if not skip_history:
+            console.print(
+                f"Pulling surprise history: {len(tickers)} tickers × ~{history_quarters} quarters"
+            )
+            results = ingest_surprise_history(
+                conn, tickers=tickers, limit_per_ticker=history_quarters
+            )
+            successes = sum(1 for v in results.values() if v >= 0)
+            failures = sum(1 for v in results.values() if v < 0)
+            total_new_history = sum(v for v in results.values() if v > 0)
+            console.print(
+                f"[green]History: {successes} success, {failures} failed, "
+                f"{total_new_history} new rows[/green]"
+            )
+
+        total_in_db = conn.execute("SELECT COUNT(*) FROM earnings_events").fetchone()
+        console.print(
+            f"[bold]Earnings events in warehouse: {total_in_db[0] if total_in_db else 0}[/bold]"
+        )
+    finally:
+        conn.close()
 
 
 @ingest_app.command("prices")
