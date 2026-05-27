@@ -3,1009 +3,1187 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catalyst Engine · Live Calls Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Catalyst Engine</title>
 <style>
-  /* ---------- Design tokens ---------- */
+  /* ==================================================================
+     DESIGN SYSTEM — Apple light, liquid glass over a living mesh
+     ================================================================== */
   :root {
-    --paper:        #FAF8F3;
-    --paper-warm:   #F4F1EA;
-    --ink:          #0E1A2B;
-    --ink-soft:     #3E4A5C;
-    --ink-mute:     #6B7686;
-    --rule:         rgba(14, 26, 43, 0.08);
-    --rule-strong:  rgba(14, 26, 43, 0.15);
-    --hit:          #2C7148;
-    --hit-bg:       rgba(44, 113, 72, 0.08);
-    --miss:         #B85C2A;
-    --miss-bg:      rgba(184, 92, 42, 0.08);
-    --pending:      #6B7686;
-    --pending-bg:   rgba(107, 118, 134, 0.08);
-    --gold:         #B8956A;
-    --gold-soft:    rgba(184, 149, 106, 0.12);
-    --glass-bg:     rgba(255, 255, 255, 0.55);
-    --glass-border: rgba(255, 255, 255, 0.7);
-    --glass-shadow: 0 1px 2px rgba(14,26,43,0.04), 0 12px 32px -8px rgba(14,26,43,0.08);
+    /* Apple system fonts */
+    --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-serif: ui-serif, "New York", "Times New Roman", Georgia, serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+    /* Ink palette — true Apple light */
+    --ink: rgba(0, 0, 0, 0.92);
+    --ink-2: rgba(0, 0, 0, 0.62);
+    --ink-3: rgba(0, 0, 0, 0.42);
+    --ink-4: rgba(0, 0, 0, 0.20);
+    --hairline: rgba(0, 0, 0, 0.07);
+
+    /* Semantic */
+    --green: #18a558;
+    --green-bg: rgba(24, 165, 88, 0.10);
+    --orange: #d97757;
+    --orange-bg: rgba(217, 119, 87, 0.10);
+    --blue: #0a84ff;
+    --blue-bg: rgba(10, 132, 255, 0.08);
+
+    /* Glass — the liquid glass primitive */
+    --glass-tint: rgba(255, 255, 255, 0.55);
+    --glass-blur: saturate(180%) blur(30px);
+    --glass-border-top: rgba(255, 255, 255, 0.85);
+    --glass-border-bottom: rgba(255, 255, 255, 0.20);
+    --glass-shadow:
+      0 0 0 0.5px rgba(0,0,0,0.06),
+      0 1px 1px rgba(0,0,0,0.02),
+      0 10px 30px -10px rgba(0,0,0,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.75);
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
 
-  html, body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    font-weight: 400;
-    line-height: 1.55;
-    font-feature-settings: 'cv11', 'ss01';
+  html {
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    min-height: 100vh;
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.45;
   }
 
-  /* Atmosphere: layered soft gradients that suggest depth without distraction */
+  body {
+    min-height: 100vh;
+    background: #f5f4f0; /* base — the rest is painted by ::before */
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* ==================================================================
+     THE MEDIUM — a living color mesh that the glass refracts.
+     Two layers: stable big blobs + a slow drift on a second layer.
+     ================================================================== */
   body::before {
     content: '';
-    position: fixed; inset: 0; z-index: -2;
+    position: fixed;
+    inset: -10%;
+    z-index: -2;
     background:
-      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(184, 149, 106, 0.10), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 90% 30%, rgba(44, 113, 72, 0.05), transparent 60%),
-      radial-gradient(ellipse 70% 50% at 50% 100%, rgba(14, 26, 43, 0.04), transparent 60%);
-    pointer-events: none;
+      radial-gradient(circle at 12% 18%, rgba(255, 180, 130, 0.55), transparent 38%),
+      radial-gradient(circle at 88% 22%, rgba(180, 220, 255, 0.55), transparent 38%),
+      radial-gradient(circle at 78% 88%, rgba(255, 200, 220, 0.50), transparent 42%),
+      radial-gradient(circle at 18% 82%, rgba(200, 240, 220, 0.50), transparent 42%),
+      radial-gradient(circle at 50% 50%, rgba(255, 230, 200, 0.40), transparent 60%);
+    filter: blur(40px);
+    animation: drift 28s ease-in-out infinite alternate;
   }
 
-  /* Faint paper grain */
+  @keyframes drift {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    50%  { transform: translate3d(2%, -1%, 0) scale(1.05); }
+    100% { transform: translate3d(-1%, 2%, 0) scale(1.02); }
+  }
+
+  /* faint grain to break up the gradients */
   body::after {
     content: '';
     position: fixed; inset: 0; z-index: -1;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.05  0 0 0 0 0.10  0 0 0 0 0.17  0 0 0 0.025 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-    pointer-events: none; mix-blend-mode: multiply; opacity: 0.6;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    pointer-events: none;
   }
 
-  /* ---------- Layout ---------- */
-  .container {
-    max-width: 1240px;
+  /* ==================================================================
+     LAYOUT
+     ================================================================== */
+  .wrap {
+    max-width: 1080px;
     margin: 0 auto;
-    padding: 56px 40px 96px;
+    padding: 56px 24px 80px;
   }
 
-  /* ---------- Masthead ---------- */
-  header.masthead {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding-bottom: 28px;
-    margin-bottom: 40px;
-    border-bottom: 1px solid var(--rule);
-    gap: 32px;
-    flex-wrap: wrap;
-  }
-
-  .brand h1 {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    font-size: 38px;
-    letter-spacing: -0.01em;
-    line-height: 1.05;
-    color: var(--ink);
-    font-variation-settings: "opsz" 96;
-  }
-
-  .brand .tagline {
-    margin-top: 6px;
-    font-size: 14px;
-    color: var(--ink-mute);
-    font-weight: 400;
-    letter-spacing: 0.01em;
-  }
-
-  .masthead-meta {
-    text-align: right;
-    font-size: 12px;
-    color: var(--ink-mute);
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.02em;
-  }
-
-  .masthead-meta .label {
-    display: block;
-    text-transform: uppercase;
-    font-size: 10px;
-    letter-spacing: 0.12em;
-    color: var(--ink-mute);
-    margin-bottom: 4px;
-  }
-
-  .masthead-meta .value {
-    font-size: 13px;
-    color: var(--ink-soft);
-    font-weight: 500;
-  }
-
-  /* ---------- Glass card primitive ---------- */
+  /* ==================================================================
+     GLASS PRIMITIVE
+     Every panel uses .glass. Edge highlights mimic the iOS Tahoe look.
+     ================================================================== */
   .glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(1.4);
-    -webkit-backdrop-filter: blur(20px) saturate(1.4);
-    border: 1px solid var(--glass-border);
-    border-radius: 14px;
-    box-shadow: var(--glass-shadow);
     position: relative;
+    background: var(--glass-tint);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: 22px;
+    box-shadow: var(--glass-shadow);
     overflow: hidden;
   }
-
+  /* top edge highlight */
   .glass::before {
     content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%);
-    pointer-events: none;
+    position: absolute;
+    inset: 0;
     border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(180deg, var(--glass-border-top) 0%, transparent 12%, transparent 88%, var(--glass-border-bottom) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    pointer-events: none;
   }
 
-  /* ---------- KPI row ---------- */
-  .kpis {
+  /* ==================================================================
+     HEADER
+     ================================================================== */
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 32px;
+    padding: 0 4px;
+  }
+  .brand {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .brand .sub {
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--ink-3);
+    margin-top: 2px;
+    letter-spacing: -0.005em;
+  }
+  .topright {
+    text-align: right;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .topright .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--green-bg);
+    color: var(--green);
+    border-radius: 100px;
+    font-weight: 500;
+    font-size: 11px;
+    letter-spacing: 0;
+  }
+  .topright .live::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .topright .last {
+    display: block;
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  /* ==================================================================
+     EXPLAINER (intro paragraph below masthead)
+     ================================================================== */
+  .explainer {
+    margin-bottom: 32px;
+    padding: 0 6px;
+  }
+  .explainer p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: 780px;
+    letter-spacing: -0.005em;
+  }
+  .explainer p strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* ==================================================================
+     HERO — the top conviction
+     ================================================================== */
+  .hero {
+    padding: 36px 40px;
+    margin-bottom: 18px;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 40px;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 32px;
+    min-height: 168px;
   }
-
-  .kpi {
-    padding: 22px 24px;
-  }
-
-  .kpi .label {
+  .hero .eyebrow {
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--ink-mute);
-    margin-bottom: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  .hero h1 {
+    margin: 0 0 6px 0;
+    font-family: var(--font-serif);
+    font-weight: 400;
+    font-size: 38px;
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .hero h1 .ticker {
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 38px;
+    letter-spacing: -0.02em;
+  }
+  .hero .thesis {
+    font-size: 15px;
+    color: var(--ink-2);
+    margin: 12px 0 0 0;
+    max-width: 540px;
+    line-height: 1.55;
+  }
+  .hero .meta-row {
+    display: flex;
+    gap: 28px;
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .hero .meta-row span strong {
+    display: block;
+    color: var(--ink);
+    font-weight: 500;
+    font-size: 13px;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero .score-block {
+    text-align: center;
+    min-width: 130px;
+    padding: 22px;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 18px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6), 0 4px 16px -8px rgba(0,0,0,0.08);
+  }
+  .hero .score-block .scorenum {
+    font-family: var(--font-serif);
+    font-size: 56px;
+    line-height: 1;
+    font-weight: 400;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+  }
+  .hero .score-block .scorelabel {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-top: 6px;
     font-weight: 500;
   }
 
-  .kpi .value {
-    font-family: 'Fraunces', serif;
-    font-size: 36px;
+  .hero.empty .h1placeholder {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    color: var(--ink-3);
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  /* ==================================================================
+     KPI STRIP — minimal, no glass card, just numbers
+     ================================================================== */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    padding: 22px 40px;
+    margin-bottom: 32px;
+  }
+  .kpi-strip > div {
+    border-right: 1px solid var(--hairline);
+    padding-right: 24px;
+  }
+  .kpi-strip > div:last-child { border-right: none; padding-right: 0; }
+  .kpi-strip .k-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .kpi-strip .k-value {
+    font-size: 30px;
     font-weight: 500;
+    letter-spacing: -0.02em;
     color: var(--ink);
-    line-height: 1.0;
-    font-variation-settings: "opsz" 96;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-strip .k-sub {
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ==================================================================
+     SECTIONS
+     ================================================================== */
+  section {
+    margin-top: 40px;
+  }
+  section .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 18px;
+    padding: 0 8px;
+  }
+  section .head h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  section .head .sub {
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+
+  /* ==================================================================
+     DAY GROUPS — calls-by-day, the morning briefing layout
+     ================================================================== */
+  .day-card {
+    padding: 0;
+    margin-bottom: 14px;
+  }
+  .day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 16px 24px 12px 24px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .day-header .date {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
     letter-spacing: -0.01em;
   }
-
-  .kpi .delta {
-    margin-top: 8px;
-    font-size: 11px;
-    color: var(--ink-mute);
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.02em;
+  .day-header .date .day-name {
+    font-weight: 400;
+    color: var(--ink-3);
+    margin-right: 8px;
   }
-
-  .kpi.accent .value { color: var(--gold); }
-
-  /* ---------- Section heads ---------- */
-  section { margin-bottom: 56px; }
-
-  section header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 18px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  section h2 {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    font-size: 22px;
-    color: var(--ink);
-    letter-spacing: -0.005em;
-    font-variation-settings: "opsz" 36;
-  }
-
-  section .meta {
+  .day-header .count {
     font-size: 12px;
-    color: var(--ink-mute);
-    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .day-body { padding: 4px 0; }
+  .call-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 140px;
+    align-items: center;
+    gap: 22px;
+    padding: 18px 24px;
+    transition: background 0.2s;
+  }
+  .call-row + .call-row { border-top: 1px solid var(--hairline); }
+  .call-row:hover { background: rgba(255, 255, 255, 0.4); }
+
+  .ticker-cell .tk {
+    font-family: var(--font-ui);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .ticker-cell .tk-name {
+    font-size: 12px;
+    color: var(--ink-3);
+    margin-top: 3px;
+    letter-spacing: -0.005em;
   }
 
-  /* ---------- Table ---------- */
-  .table-wrap {
-    padding: 4px;
+  .thesis-cell {
+    font-size: 14px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .thesis-cell .thesis-text {
+    color: var(--ink);
+    font-weight: 400;
+  }
+  .thesis-cell .signals-list {
+    color: var(--ink-3);
+    font-size: 12px;
+    margin-top: 5px;
+    letter-spacing: -0.005em;
   }
 
-  table {
+  /* score cell - clearer label */
+  .score-cell {
+    text-align: right;
+  }
+  .score-cell .num {
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .score-cell.high .num { color: var(--green); }
+  .score-cell.mid  .num { color: #b8862b; }
+  .score-cell.low  .num { color: var(--ink-3); }
+  .score-cell .base {
+    font-size: 11px;
+    color: var(--ink-3);
+    margin-top: 4px;
+    text-transform: lowercase;
+    letter-spacing: 0;
+  }
+
+  /* ==================================================================
+     TRACK RECORD TABLE — sparse, sortable
+     ================================================================== */
+  .record {
+    padding: 8px 0;
+  }
+  .record table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
   }
-
-  thead th {
+  .record thead th {
     text-align: left;
-    padding: 12px 16px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--ink-mute);
-    font-weight: 600;
-    border-bottom: 1px solid var(--rule-strong);
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.15s;
-  }
-
-  thead th:hover { color: var(--ink); }
-  thead th.sort-active { color: var(--ink); }
-  thead th .arrow {
-    display: inline-block;
-    margin-left: 4px;
-    opacity: 0;
-    transition: opacity 0.15s;
-  }
-  thead th.sort-active .arrow { opacity: 1; }
-
-  tbody td {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--rule);
-    color: var(--ink-soft);
-    vertical-align: top;
-  }
-
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr:hover { background: rgba(184, 149, 106, 0.04); }
-
-  .ticker {
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-    color: var(--ink);
-    font-size: 13px;
-    letter-spacing: 0.01em;
-  }
-
-  .num {
-    font-family: 'JetBrains Mono', monospace;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-    font-feature-settings: 'tnum';
-  }
-
-  /* Score badge */
-  .score {
-    display: inline-block;
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: 600;
-    font-size: 12px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    line-height: 1.4;
-  }
-
-  .score.s0 { background: rgba(107,118,134,0.10); color: var(--ink-mute); }
-  .score.s1 { background: rgba(107,118,134,0.16); color: var(--ink-soft); }
-  .score.s2 { background: rgba(184, 149, 106, 0.18); color: #8B6F3D; }
-  .score.s3 { background: rgba(184, 149, 106, 0.30); color: #6B5424; }
-  .score.s4 { background: rgba(44, 113, 72, 0.18); color: var(--hit); }
-  .score.s5 { background: var(--hit); color: white; }
-
-  /* Outcome pills */
-  .outcome {
-    display: inline-block;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    padding: 3px 8px;
-    border-radius: 4px;
-    text-transform: uppercase;
-  }
-
-  .outcome.hit       { background: var(--hit-bg); color: var(--hit); }
-  .outcome.miss      { background: var(--miss-bg); color: var(--miss); }
-  .outcome.pending   { background: var(--pending-bg); color: var(--pending); }
-  .outcome.invalidated { background: rgba(107,118,134,0.08); color: var(--ink-mute); }
-
-  .rules {
+    padding: 14px 24px 10px 24px;
     font-size: 11px;
-    color: var(--ink-mute);
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1.5;
-    max-width: 380px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    font-weight: 600;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .record thead th.num { text-align: right; }
+  .record tbody td {
+    padding: 14px 24px;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: middle;
+  }
+  .record tbody tr:last-child td { border-bottom: none; }
+  .record tbody tr:hover td { background: rgba(255,255,255,0.30); }
+  .record td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .record td .tk { font-weight: 600; color: var(--ink); }
+  .record .out {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .record .out.hit  { background: var(--green-bg); color: var(--green); }
+  .record .out.miss { background: var(--orange-bg); color: var(--orange); }
+  .record .out.inv  { background: rgba(0,0,0,0.05); color: var(--ink-3); }
+  .record .out::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: currentColor;
   }
 
-  /* ---------- Empty state ---------- */
-  .empty {
-    padding: 48px 24px;
-    text-align: center;
-    color: var(--ink-mute);
-  }
-  .empty .icon {
-    width: 28px; height: 28px;
-    margin: 0 auto 14px;
-    border: 1px solid var(--rule-strong);
-    border-radius: 50%;
-    position: relative;
-  }
-  .empty .icon::after {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(circle, var(--gold) 1.5px, transparent 2px);
-    border-radius: 50%;
-  }
-  .empty h3 {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    color: var(--ink-soft);
-    font-size: 16px;
-    margin-bottom: 6px;
-  }
-  .empty p {
-    font-size: 13px;
-    max-width: 380px;
-    margin: 0 auto;
-  }
-
-  /* ---------- Bucket chart ---------- */
-  .buckets {
+  /* ==================================================================
+     PERFORMANCE — minimal chart
+     ================================================================== */
+  .perf {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: 14px;
   }
-
-  .bucket-panel { padding: 24px 28px; }
-
-  .bucket-panel h3 {
-    font-family: 'Fraunces', serif;
+  .perf .card { padding: 28px 32px; }
+  .perf h3 {
+    margin: 0 0 4px 0;
     font-size: 14px;
-    font-weight: 500;
-    color: var(--ink-soft);
-    margin-bottom: 14px;
-    letter-spacing: 0;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
   }
-
-  .bucket-panel .desc {
+  .perf .card-sub {
     font-size: 12px;
-    color: var(--ink-mute);
+    color: var(--ink-3);
     margin-bottom: 22px;
     line-height: 1.5;
   }
-
-  .bar-chart .row {
+  .barrow {
     display: grid;
-    grid-template-columns: 56px 1fr 60px;
+    grid-template-columns: 56px 1fr auto;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 14px;
+    margin-bottom: 14px;
     font-size: 12px;
   }
-
-  .bar-chart .label-cell {
-    font-family: 'JetBrains Mono', monospace;
-    color: var(--ink-mute);
+  .barrow:last-child { margin-bottom: 0; }
+  .barrow .lab {
+    font-family: var(--font-mono);
     font-size: 11px;
-  }
-
-  .bar-chart .bar-cell {
-    position: relative;
-    height: 28px;
-    background: rgba(14, 26, 43, 0.04);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .bar-chart .bar {
-    position: absolute;
-    top: 0; left: 0; bottom: 0;
-    background: linear-gradient(90deg, var(--gold-soft), var(--gold));
-    border-radius: 4px;
-    transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-
-  .bar-chart .bar.zero {
-    background: var(--rule);
-  }
-
-  .bar-chart .ci {
-    position: absolute;
-    top: 50%;
-    height: 1px;
-    background: rgba(14, 26, 43, 0.45);
-    transform: translateY(-50%);
-    pointer-events: none;
-  }
-  .bar-chart .ci::before, .bar-chart .ci::after {
-    content: ''; position: absolute; top: -3px; width: 1px; height: 7px;
-    background: rgba(14, 26, 43, 0.45);
-  }
-  .bar-chart .ci::before { left: 0; }
-  .bar-chart .ci::after { right: 0; }
-
-  .bar-chart .value-cell {
-    text-align: right;
-    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink-3);
     font-variant-numeric: tabular-nums;
-    color: var(--ink);
+  }
+  .barrow .track {
+    height: 8px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 100px;
+    overflow: hidden;
+    position: relative;
+  }
+  .barrow .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--blue), #5cabff);
+    border-radius: 100px;
+    transition: width 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .barrow .fill.zero { background: rgba(0,0,0,0.08); width: 100% !important; opacity: 0.4; }
+  .barrow .val {
+    font-size: 12px;
     font-weight: 500;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+    min-width: 76px;
+    text-align: right;
+  }
+  .barrow .val .n {
+    color: var(--ink-3);
+    font-weight: 400;
+    margin-left: 6px;
     font-size: 11px;
   }
-  .bar-chart .value-cell .n {
-    display: block;
-    font-size: 9px;
-    color: var(--ink-mute);
-    font-weight: 400;
-    margin-top: 1px;
+
+  /* ==================================================================
+     EMPTY STATE
+     ================================================================== */
+  .empty {
+    padding: 36px 32px;
+    text-align: center;
+    color: var(--ink-3);
   }
+  .empty .label { font-weight: 500; color: var(--ink-2); font-size: 14px; margin-bottom: 4px; }
+  .empty .desc { font-size: 13px; max-width: 460px; margin: 0 auto; line-height: 1.5; }
 
-  /* ---------- Methodology / footer ---------- */
-  .methodology {
-    padding: 32px 36px;
-    line-height: 1.65;
-  }
-
-  .methodology h3 {
-    font-family: 'Fraunces', serif;
-    font-weight: 500;
-    font-size: 16px;
-    color: var(--ink);
-    margin-bottom: 12px;
-  }
-
-  .methodology p {
-    font-size: 13px;
-    color: var(--ink-soft);
-    max-width: 720px;
-  }
-
-  .methodology p + p { margin-top: 10px; }
-
-  .methodology .links {
-    margin-top: 22px;
-    display: flex;
-    gap: 22px;
-    flex-wrap: wrap;
-  }
-
-  .methodology a {
-    font-size: 12px;
-    color: var(--gold);
-    text-decoration: none;
-    font-family: 'JetBrains Mono', monospace;
-    border-bottom: 1px solid var(--gold-soft);
-    padding-bottom: 1px;
-    transition: border-color 0.15s, color 0.15s;
-  }
-
-  .methodology a:hover {
-    color: #8B6F3D;
-    border-bottom-color: var(--gold);
-  }
-
-  footer.colophon {
-    margin-top: 64px;
-    padding-top: 24px;
-    border-top: 1px solid var(--rule);
+  /* ==================================================================
+     FOOTER
+     ================================================================== */
+  footer.foot {
+    margin-top: 56px;
+    padding: 22px 24px 0 24px;
+    border-top: 1px solid var(--hairline);
     display: flex;
     justify-content: space-between;
-    font-size: 11px;
-    color: var(--ink-mute);
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.02em;
+    align-items: center;
+    font-size: 12px;
+    color: var(--ink-3);
     flex-wrap: wrap;
     gap: 12px;
   }
+  footer.foot a {
+    color: var(--blue);
+    text-decoration: none;
+    margin-left: 18px;
+  }
+  footer.foot a:hover { text-decoration: underline; }
 
-  /* Page-load reveal */
+  /* ==================================================================
+     REVEAL
+     ================================================================== */
   .reveal {
     opacity: 0;
-    transform: translateY(8px);
-    animation: reveal 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    transform: translateY(10px);
+    animation: reveal 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
   .reveal:nth-of-type(1) { animation-delay: 0.05s; }
-  .reveal:nth-of-type(2) { animation-delay: 0.15s; }
-  .reveal:nth-of-type(3) { animation-delay: 0.25s; }
-  .reveal:nth-of-type(4) { animation-delay: 0.35s; }
-  .reveal:nth-of-type(5) { animation-delay: 0.45s; }
-  .reveal:nth-of-type(6) { animation-delay: 0.55s; }
+  .reveal:nth-of-type(2) { animation-delay: 0.12s; }
+  .reveal:nth-of-type(3) { animation-delay: 0.19s; }
+  .reveal:nth-of-type(4) { animation-delay: 0.26s; }
+  .reveal:nth-of-type(5) { animation-delay: 0.33s; }
+  .reveal:nth-of-type(6) { animation-delay: 0.40s; }
+  @keyframes reveal { to { opacity: 1; transform: none; } }
 
-  @keyframes reveal {
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  /* Responsive */
-  @media (max-width: 900px) {
-    .container { padding: 40px 24px 80px; }
-    .kpis { grid-template-columns: repeat(2, 1fr); }
-    .buckets { grid-template-columns: 1fr; }
-    .brand h1 { font-size: 30px; }
-    thead th, tbody td { padding: 10px 12px; }
-    .rules { max-width: 240px; }
-  }
-  @media (max-width: 600px) {
-    .kpis { grid-template-columns: 1fr; }
-    table thead { display: none; }
-    table tbody tr {
-      display: block;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--rule);
-    }
-    table tbody td {
-      display: flex;
-      justify-content: space-between;
-      padding: 4px 0;
-      border: none;
-    }
-    table tbody td::before {
-      content: attr(data-label);
-      font-size: 10px;
-      text-transform: uppercase;
-      color: var(--ink-mute);
-      letter-spacing: 0.1em;
-      font-weight: 600;
-    }
+  /* ==================================================================
+     RESPONSIVE
+     ================================================================== */
+  @media (max-width: 760px) {
+    .wrap { padding: 32px 16px 64px; }
+    .hero { grid-template-columns: 1fr; gap: 22px; padding: 28px 24px; }
+    .hero .score-block { align-self: start; }
+    .hero h1, .hero h1 .ticker { font-size: 30px; }
+    .kpi-strip { grid-template-columns: repeat(2, 1fr); padding: 18px 22px; gap: 18px 0; }
+    .kpi-strip > div { border-right: none; padding: 0; }
+    .kpi-strip > div:nth-child(odd) { border-right: 1px solid var(--hairline); padding-right: 18px; }
+    .perf { grid-template-columns: 1fr; }
+    .call-row { grid-template-columns: 1fr auto; gap: 12px 14px; padding: 14px 18px; }
+    .call-row .ticker-cell .tk { font-size: 15px; }
+    .call-row .thesis-cell { grid-column: 1 / -1; }
+    .call-row .score-cell { grid-row: 1; grid-column: 2; }
   }
 </style>
 </head>
 <body>
 
-<div class="container">
+<div class="wrap">
 
-  <!-- ============ MASTHEAD ============ -->
-  <header class="masthead reveal">
+  <!-- ======================== TOP ======================== -->
+  <header class="top reveal">
     <div class="brand">
-      <h1>Catalyst Engine</h1>
-      <div class="tagline">A single-name event tracking system for discretionary equity desks</div>
+      Catalyst Engine
+      <span class="sub">A research workflow that scores upcoming US earnings prints and logs every call publicly</span>
     </div>
-    <div class="masthead-meta">
-      <span class="label">Last scan</span>
-      <span class="value" id="last-scan">loading</span>
+    <div class="topright">
+      <span class="live">Live</span>
+      <span class="last" id="last-scan">—</span>
     </div>
   </header>
 
-  <!-- ============ KPI ROW ============ -->
-  <div class="kpis reveal">
-    <div class="kpi glass">
-      <div class="label">Calls logged</div>
-      <div class="value" id="kpi-total">—</div>
-      <div class="delta" id="kpi-total-delta">all time</div>
+  <!-- ======================== EXPLAINER ======================== -->
+  <div class="explainer reveal">
+    <p>
+      <strong>Catalyst Engine</strong> watches 241 US large-cap stocks. Each morning it scores the next two weeks of earnings prints from <strong>0 (no signal)</strong> to <strong>10 (very high conviction)</strong>, then logs every call publicly with a timestamp. After each company reports, the engine checks whether the actual 1-day move was bigger than that stock's usual move — a verifiable hit-or-miss record that builds in the open over time.
+    </p>
+  </div>
+
+  <!-- ======================== HERO ======================== -->
+  <div class="glass hero reveal" id="hero">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- ======================== KPI STRIP ======================== -->
+  <div class="glass kpi-strip reveal">
+    <div>
+      <div class="k-label">Stocks watched</div>
+      <div class="k-value">241</div>
+      <div class="k-sub">large-cap US equities</div>
     </div>
-    <div class="kpi glass">
-      <div class="label">Pending</div>
-      <div class="value" id="kpi-pending">—</div>
-      <div class="delta" id="kpi-pending-delta">awaiting outcome</div>
+    <div>
+      <div class="k-label">Calls in queue</div>
+      <div class="k-value" id="kpi-pending">—</div>
+      <div class="k-sub" id="kpi-pending-sub">awaiting their print</div>
     </div>
-    <div class="kpi glass accent">
-      <div class="label">Hit rate</div>
-      <div class="value" id="kpi-hitrate">—</div>
-      <div class="delta" id="kpi-hitrate-delta">resolved calls</div>
+    <div>
+      <div class="k-label">Calls resolved</div>
+      <div class="k-value" id="kpi-record">—</div>
+      <div class="k-sub" id="kpi-record-sub">verified outcomes</div>
     </div>
-    <div class="kpi glass">
-      <div class="label">Discipline</div>
-      <div class="value" id="kpi-discipline">—</div>
-      <div class="delta" id="kpi-discipline-delta">to trusted N=30</div>
+    <div>
+      <div class="k-label">Track record maturity</div>
+      <div class="k-value" id="kpi-confidence">—</div>
+      <div class="k-sub" id="kpi-confidence-sub">until weights are trusted</div>
     </div>
   </div>
 
-  <!-- ============ UPCOMING (PENDING) ============ -->
+  <!-- ======================== UPCOMING ======================== -->
   <section class="reveal">
-    <header>
-      <h2>Upcoming calls</h2>
-      <span class="meta" id="pending-meta">—</span>
-    </header>
-    <div class="glass table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th data-sort="ticker">Ticker<span class="arrow">↑</span></th>
-            <th data-sort="event_date">Event date<span class="arrow">↑</span></th>
-            <th data-sort="catalyst_type">Type<span class="arrow">↑</span></th>
-            <th data-sort="score" class="sort-active">Score<span class="arrow">↓</span></th>
-            <th data-sort="trailing_baseline_pct" class="num">Baseline<span class="arrow">↑</span></th>
-            <th>Rules fired</th>
-          </tr>
-        </thead>
-        <tbody id="pending-body"></tbody>
-      </table>
-      <div class="empty" id="pending-empty" style="display:none">
-        <div class="icon"></div>
-        <h3>No pending calls</h3>
-        <p>The next scan will run on the morning of the next weekday session and surface upcoming catalysts.</p>
+    <div class="head">
+      <div>
+        <h2>Upcoming earnings, next 14 days</h2>
+        <div class="sub" style="margin-top:4px;max-width:640px;">The engine watches 241 large-cap US stocks and scores each upcoming earnings event from 0 (no signal) to 10 (very high conviction). Below are every name reporting in the next two weeks, grouped by day.</div>
       </div>
+      <span class="sub" id="upcoming-meta">—</span>
+    </div>
+    <div id="upcoming-container">
+      <!-- day-grouped cards rendered here -->
     </div>
   </section>
 
-  <!-- ============ TRACK RECORD ============ -->
+  <!-- ======================== TRACK RECORD ======================== -->
   <section class="reveal">
-    <header>
-      <h2>Resolved track record</h2>
-      <span class="meta" id="resolved-meta">—</span>
-    </header>
-    <div class="glass table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th data-sort="ticker">Ticker<span class="arrow">↑</span></th>
-            <th data-sort="event_date" class="sort-active">Event<span class="arrow">↓</span></th>
-            <th data-sort="score">Score<span class="arrow">↑</span></th>
-            <th data-sort="realized_move_pct" class="num">Realized<span class="arrow">↑</span></th>
-            <th data-sort="trailing_baseline_pct" class="num">Baseline<span class="arrow">↑</span></th>
-            <th data-sort="move_ratio" class="num">Ratio<span class="arrow">↑</span></th>
-            <th data-sort="outcome">Outcome<span class="arrow">↑</span></th>
-          </tr>
-        </thead>
-        <tbody id="resolved-body"></tbody>
-      </table>
-      <div class="empty" id="resolved-empty" style="display:none">
-        <div class="icon"></div>
-        <h3>No resolved calls yet</h3>
-        <p>The first calls will resolve the morning after their event date. Until then, every pending call is awaiting its print.</p>
+    <div class="head">
+      <div>
+        <h2>Resolved track record</h2>
+        <div class="sub" style="margin-top:4px;max-width:640px;" id="record-meta">After each company reports, the engine checks whether the actual 1-day move exceeded its typical move. A "hit" means the conviction call was correct.</div>
       </div>
+    </div>
+    <div class="glass record" id="record-container">
+      <!-- table rendered here -->
     </div>
   </section>
 
-  <!-- ============ PERFORMANCE PANELS ============ -->
+  <!-- ======================== PERFORMANCE ======================== -->
   <section class="reveal">
-    <header>
-      <h2>Performance</h2>
-      <span class="meta">live + historical backtest</span>
-    </header>
-    <div class="buckets">
-
-      <div class="bucket-panel glass">
-        <h3>Live: hit rate by score bucket</h3>
-        <p class="desc">Outcomes from real-time calls only. Weights remain frozen until N&nbsp;≥&nbsp;30 resolved calls.</p>
-        <div class="bar-chart" id="live-buckets"></div>
+    <div class="head">
+      <div>
+        <h2>How the engine has scored</h2>
+        <div class="sub" style="margin-top:4px;max-width:640px;">Hit rates by conviction band. Live performance fills in as calls resolve. The historical backtest on five years of data is shown alongside for context.</div>
       </div>
-
-      <div class="bucket-panel glass">
-        <h3>Backtest: hit rate by score bucket</h3>
-        <p class="desc">2,881 evaluable earnings events, 5-year history. 95% bootstrap CIs (1,000 resamples).</p>
-        <div class="bar-chart">
-          <div class="row">
-            <div class="label-cell">0&nbsp;–&nbsp;2</div>
-            <div class="bar-cell"><div class="bar" style="width: 48.9%"></div><div class="ci" style="left: 46.6%; width: 4.6%"></div></div>
-            <div class="value-cell">48.9%<span class="n">N=1,760</span></div>
-          </div>
-          <div class="row">
-            <div class="label-cell">2&nbsp;–&nbsp;4</div>
-            <div class="bar-cell"><div class="bar" style="width: 52.2%"></div><div class="ci" style="left: 48.2%; width: 8.0%"></div></div>
-            <div class="value-cell">52.2%<span class="n">N=596</span></div>
-          </div>
-          <div class="row">
-            <div class="label-cell">4&nbsp;–&nbsp;6</div>
-            <div class="bar-cell"><div class="bar" style="width: 57.9%"></div><div class="ci" style="left: 36.8%; width: 42.1%"></div></div>
-            <div class="value-cell">57.9%<span class="n">N=19</span></div>
-          </div>
+    </div>
+    <div class="perf">
+      <div class="glass card">
+        <h3>Live calls so far</h3>
+        <p class="card-sub">Real-time outcomes only. Below 30 resolved calls the weights are treated as untrusted.</p>
+        <div id="live-buckets"></div>
+      </div>
+      <div class="glass card">
+        <h3>Five-year backtest</h3>
+        <p class="card-sub">2,881 earnings events scored against trailing 8-quarter baseline.</p>
+        <div>
+          <div class="barrow"><div class="lab">0 – 2</div><div class="track"><div class="fill" style="width:48.9%"></div></div><div class="val">48.9%<span class="n">N = 1,760</span></div></div>
+          <div class="barrow"><div class="lab">2 – 4</div><div class="track"><div class="fill" style="width:52.2%"></div></div><div class="val">52.2%<span class="n">N = 596</span></div></div>
+          <div class="barrow"><div class="lab">4 – 6</div><div class="track"><div class="fill" style="width:57.9%"></div></div><div class="val">57.9%<span class="n">N = 19</span></div></div>
         </div>
       </div>
-
     </div>
   </section>
 
-  <!-- ============ METHODOLOGY ============ -->
-  <section class="reveal">
-    <header>
-      <h2>Methodology &amp; honest findings</h2>
-    </header>
-    <div class="glass methodology">
-      <h3>What this is</h3>
-      <p>Catalyst Engine tracks ~250 US large-caps across Healthcare, Consumer, Tech, and Industrials. Each weekday morning a scheduled job scores upcoming earnings catalysts and appends new calls to a public log. Each weekday evening, calls whose event date has passed are resolved against realized 1-day price moves and classified HIT or MISS against the trailing 8-quarter baseline. Misses receive a written post-mortem.</p>
-
-      <h3 style="margin-top: 22px">What the backtest says</h3>
-      <p>On free large-cap data with rule-based scoring, the V0 engine performs at approximately the efficient-markets baseline. Bucket 4-6 trends positive but N is too small to call a result. The infrastructure, PIT discipline, and 10b5-1 filtering are the contribution; the live track record is the deliverable.</p>
-
-      <h3 style="margin-top: 22px">Findings worth keeping</h3>
-      <p>Large-cap insider buys are rare: 1,760 open-market buys versus 103,345 sales across 5 years. The Cohen-Malloy-Pomorski cluster-buy signal fires only 3 times across the entire universe. The literature edge lives in small-caps, not the S&amp;P 500. Vol clustering signals are arbed out. Net selling above $5M (excluding 10b5-1 pre-planned trades) shows weak directional signal but below significance.</p>
-
-      <div class="links">
-        <a href="https://github.com/pawarraj8888/catalyst-engine">Repository</a>
-        <a href="https://github.com/pawarraj8888/catalyst-engine/blob/main/live_log/calls.csv">Raw calls log</a>
-        <a href="https://github.com/pawarraj8888/catalyst-engine/tree/main/live_log/postmortems">Post-mortems</a>
-        <a href="https://github.com/pawarraj8888/catalyst-engine/blob/main/docs/methodology.md">Full methodology</a>
-      </div>
-    </div>
-  </section>
-
-  <footer class="colophon">
+  <!-- ======================== FOOTER ======================== -->
+  <footer class="foot">
     <span>Catalyst Engine · built by Raj Pawar</span>
-    <span id="schema-tag">schema v1</span>
+    <span>
+      <a href="https://github.com/pawarraj8888/catalyst-engine">Repository</a>
+      <a href="https://github.com/pawarraj8888/catalyst-engine/blob/main/live_log/calls.csv">Raw log</a>
+      <a href="https://github.com/pawarraj8888/catalyst-engine/blob/main/docs/methodology.md">Methodology</a>
+    </span>
   </footer>
 
 </div>
 
-<!-- ============================= DATA LAYER ============================= -->
 <script>
 (function () {
   'use strict';
 
-  // ----------- CSV parsing (minimal, schema-aware) -----------
+  // ============ CSV ============
   function parseCSV(text) {
-    const lines = text.replace(/\r\n/g, '\n').split('\n').filter(l => l.length > 0 && !l.startsWith('#'));
-    if (lines.length === 0) return { columns: [], rows: [] };
-    const columns = splitCSVLine(lines[0]);
-    const rows = lines.slice(1).map(line => {
-      const cells = splitCSVLine(line);
+    const lines = text.replace(/\r\n/g, '\n').split('\n').filter(l => l && !l.startsWith('#'));
+    if (!lines.length) return [];
+    const cols = splitLine(lines[0]);
+    return lines.slice(1).map(line => {
+      const cells = splitLine(line);
       const obj = {};
-      columns.forEach((col, i) => obj[col] = cells[i] || '');
+      cols.forEach((c, i) => obj[c] = cells[i] || '');
       return obj;
     }).filter(r => r.event_date && r.ticker);
-    return { columns, rows };
   }
-
-  function splitCSVLine(line) {
-    // Handle quoted fields with commas (JSON in score_components, etc.)
-    const out = [];
-    let cur = '';
-    let inQuotes = false;
+  function splitLine(line) {
+    const out = []; let cur = ''; let q = false;
     for (let i = 0; i < line.length; i++) {
       const ch = line[i];
-      if (ch === '"' && line[i+1] === '"' && inQuotes) { cur += '"'; i++; continue; }
-      if (ch === '"') { inQuotes = !inQuotes; continue; }
-      if (ch === ',' && !inQuotes) { out.push(cur); cur = ''; continue; }
+      if (ch === '"' && line[i+1] === '"' && q) { cur += '"'; i++; continue; }
+      if (ch === '"') { q = !q; continue; }
+      if (ch === ',' && !q) { out.push(cur); cur = ''; continue; }
       cur += ch;
     }
     out.push(cur);
     return out;
   }
+  const pf = s => { if (s == null || s === '') return null; const n = parseFloat(s); return isNaN(n) ? null : n; };
 
-  function parseFloatSafe(s) {
-    if (s == null || s === '') return null;
-    const n = parseFloat(s);
-    return isNaN(n) ? null : n;
+  // ============ Formatting ============
+  const fmtPct  = (n, d=2) => n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(d) + '%';
+  const fmtBase = (n, d=2) => n == null ? '—' : n.toFixed(d) + '%';
+  const fmtNum  = (n, d=2) => n == null ? '—' : n.toFixed(d);
+
+  function relTime(iso) {
+    if (!iso) return '—';
+    const then = new Date(iso); const now = new Date();
+    const s = (now - then) / 1000;
+    if (s < 60)        return 'updated just now';
+    if (s < 3600)      return 'updated ' + Math.floor(s / 60) + ' min ago';
+    if (s < 86400)     return 'updated ' + Math.floor(s / 3600) + ' hr ago';
+    if (s < 7*86400)   return 'updated ' + Math.floor(s / 86400) + ' days ago';
+    return 'updated ' + then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
 
-  // ----------- Formatting -----------
-  const fmtPct = (n, digits=2) => n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(digits) + '%';
-  const fmtNum = (n, digits=2) => n == null ? '—' : n.toFixed(digits);
-  const fmtDate = (s) => {
-    if (!s) return '—';
-    const d = new Date(s + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-  const fmtRelative = (iso) => {
-    if (!iso) return '—';
-    const then = new Date(iso);
-    const now = new Date();
-    const diffSec = (now - then) / 1000;
-    if (diffSec < 60) return 'just now';
-    if (diffSec < 3600) return Math.floor(diffSec / 60) + 'm ago';
-    if (diffSec < 86400) return Math.floor(diffSec / 3600) + 'h ago';
-    if (diffSec < 7 * 86400) return Math.floor(diffSec / 86400) + 'd ago';
-    return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
+  function dayHeader(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const event = new Date(d); event.setHours(0,0,0,0);
+    const diffDays = Math.round((event - today) / 86400000);
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+    const dateLabel = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    let badge = '';
+    if (diffDays === 0)      badge = 'Today';
+    else if (diffDays === 1) badge = 'Tomorrow';
+    else if (diffDays <= 7)  badge = 'This week';
+    return { dayName, dateLabel, badge, diffDays };
+  }
 
   function scoreClass(s) {
-    if (s == null) return 's0';
-    if (s < 0.5) return 's0';
-    if (s < 1.5) return 's1';
-    if (s < 2.5) return 's2';
-    if (s < 4.0) return 's3';
-    if (s < 6.0) return 's4';
-    return 's5';
+    if (s == null || s < 1.5) return 'low';
+    if (s < 3.0) return 'mid';
+    return 'high';
   }
 
-  function formatRules(r) {
-    if (!r) return '<span style="opacity:0.5">(none)</span>';
-    return r.split('|').filter(Boolean).map(x => x.replace(/_/g, ' ')).join(', ');
+  function convictionLabel(s) {
+    if (s == null) return 'no signal';
+    if (s < 1.0) return 'no view';
+    if (s < 2.0) return 'low';
+    if (s < 3.0) return 'moderate';
+    if (s < 4.5) return 'above average';
+    if (s < 6.0) return 'high';
+    return 'very high';
   }
 
-  // ----------- KPIs -----------
+  // Company name lookup (the most common large-caps; extend over time)
+  const COMPANY_NAMES = {
+    AAPL: 'Apple', MSFT: 'Microsoft', GOOGL: 'Alphabet', GOOG: 'Alphabet',
+    AMZN: 'Amazon', META: 'Meta Platforms', NVDA: 'NVIDIA', TSLA: 'Tesla',
+    BRK: 'Berkshire Hathaway', JPM: 'JPMorgan', V: 'Visa', MA: 'Mastercard',
+    UNH: 'UnitedHealth', JNJ: 'Johnson & Johnson', WMT: 'Walmart',
+    XOM: 'Exxon Mobil', PG: 'Procter & Gamble', HD: 'Home Depot',
+    CVX: 'Chevron', LLY: 'Eli Lilly', ABBV: 'AbbVie', MRK: 'Merck',
+    AVGO: 'Broadcom', PEP: 'PepsiCo', KO: 'Coca-Cola', COST: 'Costco',
+    BAC: 'Bank of America', PFE: 'Pfizer', TMO: 'Thermo Fisher',
+    CSCO: 'Cisco', ACN: 'Accenture', ABT: 'Abbott', LIN: 'Linde',
+    NFLX: 'Netflix', ADBE: 'Adobe', ORCL: 'Oracle', CRM: 'Salesforce',
+    NKE: 'Nike', DIS: 'Disney', WFC: 'Wells Fargo', AMD: 'AMD',
+    INTC: 'Intel', QCOM: 'Qualcomm', TXN: 'Texas Instruments',
+    INTU: 'Intuit', NOW: 'ServiceNow', AMAT: 'Applied Materials',
+    PYPL: 'PayPal', UBER: 'Uber', BKNG: 'Booking Holdings',
+    SBUX: 'Starbucks', MDT: 'Medtronic', LOW: 'Lowe\'s', TGT: 'Target',
+    UPS: 'UPS', FDX: 'FedEx', BA: 'Boeing', CAT: 'Caterpillar',
+    DE: 'Deere', GE: 'GE Aerospace', RTX: 'RTX', HON: 'Honeywell',
+    UNP: 'Union Pacific', LMT: 'Lockheed Martin', NOC: 'Northrop Grumman',
+    MU: 'Micron', SNPS: 'Synopsys', CDNS: 'Cadence', PANW: 'Palo Alto Networks',
+    CRWD: 'CrowdStrike', SNOW: 'Snowflake', MDB: 'MongoDB', NET: 'Cloudflare',
+    DDOG: 'Datadog', OKTA: 'Okta', ZS: 'Zscaler', S: 'SentinelOne',
+    PATH: 'UiPath', GTLB: 'GitLab', ESTC: 'Elastic', DELL: 'Dell',
+    HPE: 'HP Enterprise', NTAP: 'NetApp', MRVL: 'Marvell',
+    DLTR: 'Dollar Tree', DG: 'Dollar General', KR: 'Kroger',
+    LULU: 'Lululemon', RH: 'RH', GIS: 'General Mills', JD: 'JD.com',
+    BABA: 'Alibaba'
+  };
+  const companyName = (tkr) => COMPANY_NAMES[tkr] || tkr;
+
+  // PM-readable thesis lines. Each maps a rule pattern to a plain-English
+  // explanation of what the engine is seeing and what it implies.
+  function thesisLine(call) {
+    const rules = (call._rules || '').split('|').filter(Boolean);
+    const name = companyName(call.ticker);
+
+    if (rules.includes('vol_compression_severe')) {
+      return `${name} has had several unusually quiet earnings prints in a row. The engine flags this as a coiled-spring setup: when the pattern breaks, the move tends to be larger than the recent calm suggests.`;
+    }
+    if (rules.includes('vol_compression_3q')) {
+      return `${name} has traded calmly into recent earnings. Quiet stretches like this often precede an outsized reaction once the streak ends.`;
+    }
+    if (rules.includes('vol_saturation_extreme')) {
+      return `${name} has had repeated large reactions to recent earnings. The engine flags this as elevated risk of mean-reversion: the next print may be smaller than the recent prints have been.`;
+    }
+    if (rules.includes('vol_saturation_3q')) {
+      return `${name} has been moving more than its own history would predict. The pattern may continue, but the asymmetry is starting to look stretched.`;
+    }
+    if (rules.includes('insider_meaningful_buy')) {
+      return `${name} insiders have purchased a material amount of stock on the open market ahead of this print. Excludes pre-planned 10b5-1 trades.`;
+    }
+    if (rules.includes('insider_meaningful_sell')) {
+      return `${name} insiders have sold a material amount of stock ahead of this print, beyond what their 10b5-1 plans explain.`;
+    }
+    if (rules.includes('high_vol_baseline')) {
+      return `${name} historically moves substantially on earnings. No directional view, just a flag to size positions accordingly.`;
+    }
+    if (rules.includes('insider_silent') && rules.length <= 3) {
+      return `${name} shows no structural pre-print signals. The engine has no view; treat the print as a coin flip until something else surfaces.`;
+    }
+    return `Several signals overlap on ${name}. Worth a closer look.`;
+  }
+
+  function thesisShort(call) {
+    const rules = (call._rules || '').split('|').filter(Boolean);
+    if (rules.includes('vol_compression_severe')) return 'Coiled-spring setup. A larger-than-usual move is increasingly likely.';
+    if (rules.includes('vol_compression_3q'))     return 'Has been quiet into recent prints. Watch for asymmetric reaction.';
+    if (rules.includes('vol_saturation_extreme')) return 'Repeatedly volatile into prints. Mean-reversion risk elevated.';
+    if (rules.includes('vol_saturation_3q'))      return 'Pattern of outsized prints. May continue but stretched.';
+    if (rules.includes('insider_meaningful_buy')) return 'Material insider buying ahead of print.';
+    if (rules.includes('insider_meaningful_sell'))return 'Material insider selling beyond 10b5-1 plans.';
+    if (rules.includes('high_vol_baseline'))      return 'Historically wide-moving name. Size accordingly.';
+    if (rules.includes('insider_silent') && rules.length <= 3) return 'No conviction. Engine has no view on this print.';
+    return 'Multiple signals worth a closer look.';
+  }
+
+  function signalsSummary(call) {
+    // Convert the technical rules-fired list into a human-readable signal count
+    const rules = (call._rules || '').split('|').filter(Boolean);
+    const meaningful = rules.filter(r => !['has_history', 'has_deep_history'].includes(r));
+    if (meaningful.length === 0) return 'No active signals';
+    const labels = meaningful.map(r => {
+      const map = {
+        vol_compression_3q: 'compressed vol (3Q)',
+        vol_compression_severe: 'severe compression',
+        vol_saturation_3q: 'saturated vol (3Q)',
+        vol_saturation_extreme: 'extreme saturation',
+        high_vol_baseline: 'wide-moving baseline',
+        insider_meaningful_buy: 'insider buying',
+        insider_meaningful_sell: 'insider selling',
+        insider_cluster_buying: 'cluster buying',
+        insider_cluster_selling: 'cluster selling',
+        insider_silent: 'no insider activity',
+      };
+      return map[r] || r.replace(/_/g, ' ');
+    });
+    return labels.join(', ');
+  }
+
+  // ============ Hero ============
+  function renderHero(pending) {
+    const el = document.getElementById('hero');
+    if (!pending.length) {
+      el.classList.add('empty');
+      el.innerHTML = `
+        <div>
+          <div class="eyebrow">No active calls</div>
+          <div class="h1placeholder">The engine is between scans.</div>
+        </div>`;
+      return;
+    }
+    const top = [...pending].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
+    const day = dayHeader(top.event_date);
+    const eventLabel = day.badge ? `${day.badge}, ${day.dateLabel}` : `${day.dayName}, ${day.dateLabel}`;
+    el.innerHTML = `
+      <div>
+        <div class="eyebrow">This morning's highest-conviction setup</div>
+        <h1><span class="ticker">${top.ticker}</span> · ${companyName(top.ticker)}</h1>
+        <div class="thesis">${thesisLine(top)}</div>
+        <div class="meta-row">
+          <span>Reporting<strong>${eventLabel}</strong></span>
+          <span>Typical move<strong>${fmtBase(top.trailing_baseline_pct)}</strong></span>
+          <span>Active signals<strong>${(top._rules || '').split('|').filter(r => r && !['has_history','has_deep_history'].includes(r)).length}</strong></span>
+        </div>
+      </div>
+      <div class="score-block">
+        <div class="scorenum">${(top.score || 0).toFixed(1)}</div>
+        <div class="scorelabel">Conviction · ${convictionLabel(top.score)}</div>
+      </div>
+    `;
+  }
+
+  // ============ KPIs ============
   function renderKPIs(calls) {
-    const total = calls.length;
-    const pending = calls.filter(c => c.outcome === 'PENDING').length;
-    const hits = calls.filter(c => c.outcome === 'HIT').length;
-    const misses = calls.filter(c => c.outcome === 'MISS').length;
+    const pending  = calls.filter(c => c.outcome === 'PENDING').length;
+    const hits     = calls.filter(c => c.outcome === 'HIT').length;
+    const misses   = calls.filter(c => c.outcome === 'MISS').length;
     const resolved = hits + misses;
-    const hitRate = resolved > 0 ? (hits / resolved * 100) : null;
-    const lastTs = calls.length > 0 ? calls.map(c => c.timestamp).filter(Boolean).sort().pop() : null;
+    const rate     = resolved > 0 ? hits / resolved * 100 : null;
+    const lastTs   = calls.map(c => c.timestamp).filter(Boolean).sort().pop();
 
-    document.getElementById('kpi-total').textContent = total;
     document.getElementById('kpi-pending').textContent = pending;
-    document.getElementById('kpi-hitrate').textContent = hitRate == null ? '—' : hitRate.toFixed(1) + '%';
-    document.getElementById('kpi-hitrate-delta').textContent = resolved + ' resolved';
+    document.getElementById('kpi-pending-sub').textContent = pending === 1 ? 'awaiting outcome' : 'awaiting outcomes';
+
+    document.getElementById('kpi-record').textContent =
+      resolved === 0 ? '—' : `${hits} / ${resolved}`;
+    document.getElementById('kpi-record-sub').textContent =
+      resolved === 0 ? 'first resolution pending' : (rate != null ? rate.toFixed(0) + '% hit rate' : '');
 
     if (resolved >= 30) {
-      document.getElementById('kpi-discipline').textContent = 'live';
-      document.getElementById('kpi-discipline-delta').textContent = 'weights trusted';
+      document.getElementById('kpi-confidence').textContent = 'live';
+      document.getElementById('kpi-confidence-sub').textContent = 'weights trusted';
     } else {
-      document.getElementById('kpi-discipline').textContent = resolved + '/30';
-      document.getElementById('kpi-discipline-delta').textContent = (30 - resolved) + ' to go';
+      const pct = Math.round(resolved / 30 * 100);
+      document.getElementById('kpi-confidence').textContent = pct + '%';
+      document.getElementById('kpi-confidence-sub').textContent = (30 - resolved) + ' to reach N = 30';
     }
 
-    document.getElementById('last-scan').textContent = fmtRelative(lastTs);
+    document.getElementById('last-scan').textContent = relTime(lastTs);
   }
 
-  // ----------- Tables -----------
-  let pendingRows = [];
-  let resolvedRows = [];
-  let pendingSort = { key: 'score', dir: 'desc' };
-  let resolvedSort = { key: 'event_date', dir: 'desc' };
+  // ============ Day-grouped upcoming ============
+  function renderUpcoming(pending) {
+    const container = document.getElementById('upcoming-container');
+    const meta = document.getElementById('upcoming-meta');
 
-  function compare(a, b, key, dir) {
-    let va = a[key], vb = b[key];
-    if (typeof va === 'number' || typeof vb === 'number') {
-      va = va == null ? -Infinity : va;
-      vb = vb == null ? -Infinity : vb;
-    }
-    if (va < vb) return dir === 'asc' ? -1 : 1;
-    if (va > vb) return dir === 'asc' ? 1 : -1;
-    return 0;
-  }
-
-  function renderPending() {
-    const body = document.getElementById('pending-body');
-    const empty = document.getElementById('pending-empty');
-    body.innerHTML = '';
-
-    if (pendingRows.length === 0) {
-      empty.style.display = 'block';
-      document.getElementById('pending-meta').textContent = '0 calls';
+    if (!pending.length) {
+      container.innerHTML = `
+        <div class="glass empty">
+          <div class="label">No upcoming calls in the next 14 days</div>
+          <div class="desc">The next scheduled scan will run on the next weekday morning at 09:00 ET.</div>
+        </div>`;
+      meta.textContent = '0 calls';
       return;
     }
-    empty.style.display = 'none';
 
-    const sorted = [...pendingRows].sort((a, b) => compare(a, b, pendingSort.key, pendingSort.dir));
-    document.getElementById('pending-meta').textContent = sorted.length + ' awaiting outcome';
-
-    for (const c of sorted) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td data-label="Ticker"><span class="ticker">${c.ticker}</span></td>
-        <td data-label="Event">${fmtDate(c.event_date)}</td>
-        <td data-label="Type">${c.catalyst_type}</td>
-        <td data-label="Score"><span class="score ${scoreClass(c.score)}">${c.score == null ? '—' : c.score.toFixed(2)}</span></td>
-        <td data-label="Baseline" class="num">${fmtNum(c.trailing_baseline_pct, 2)}%</td>
-        <td data-label="Rules"><div class="rules">${formatRules(c._rules_raw)}</div></td>
-      `;
-      body.appendChild(tr);
+    // Group by event_date, sort days asc, calls within day by score desc
+    const byDay = new Map();
+    for (const c of pending) {
+      if (!byDay.has(c.event_date)) byDay.set(c.event_date, []);
+      byDay.get(c.event_date).push(c);
     }
+    const sortedDays = [...byDay.keys()].sort();
+    for (const d of sortedDays) {
+      byDay.get(d).sort((a, b) => (b.score || 0) - (a.score || 0));
+    }
+
+    meta.textContent = `${pending.length} calls across ${sortedDays.length} session${sortedDays.length === 1 ? '' : 's'}`;
+
+    container.innerHTML = sortedDays.map(d => {
+      const h = dayHeader(d);
+      const dayCalls = byDay.get(d);
+      return `
+        <div class="glass day-card">
+          <div class="day-header">
+            <span class="date"><span class="day-name">${h.dayName}</span>${h.dateLabel}${h.badge ? ` · <span style="color:var(--blue);font-weight:500">${h.badge}</span>` : ''}</span>
+            <span class="count">${dayCalls.length} ${dayCalls.length === 1 ? 'company' : 'companies'} reporting</span>
+          </div>
+          <div class="day-body">
+            ${dayCalls.map(c => `
+              <div class="call-row">
+                <div class="ticker-cell">
+                  <div class="tk">${c.ticker}</div>
+                  <div class="tk-name">${companyName(c.ticker)}</div>
+                </div>
+                <div class="thesis-cell">
+                  <div class="thesis-text">${thesisShort(c)}</div>
+                  <div class="signals-list">${signalsSummary(c)}</div>
+                </div>
+                <div class="score-cell ${scoreClass(c.score)}">
+                  <div class="num">${c.score != null ? c.score.toFixed(1) : '—'}</div>
+                  <div class="base">${convictionLabel(c.score)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
-  function renderResolved() {
-    const body = document.getElementById('resolved-body');
-    const empty = document.getElementById('resolved-empty');
-    body.innerHTML = '';
-
-    if (resolvedRows.length === 0) {
-      empty.style.display = 'block';
-      document.getElementById('resolved-meta').textContent = '0 resolved';
+  // ============ Track record table ============
+  function renderRecord(resolved) {
+    const container = document.getElementById('record-container');
+    if (!resolved.length) {
+      container.innerHTML = `
+        <div class="empty">
+          <div class="label">No resolved calls yet</div>
+          <div class="desc">The first calls will be resolved the morning after their event date. Track record builds from there.</div>
+        </div>`;
       return;
     }
-    empty.style.display = 'none';
+    const sorted = [...resolved].sort((a, b) =>
+      a.event_date < b.event_date ? 1 : a.event_date > b.event_date ? -1 : 0);
 
-    const sorted = [...resolvedRows].sort((a, b) => compare(a, b, resolvedSort.key, resolvedSort.dir));
-    document.getElementById('resolved-meta').textContent = sorted.length + ' resolved';
-
-    for (const c of sorted) {
-      const tr = document.createElement('tr');
-      const outcomeClass = (c.outcome || '').toLowerCase();
-      tr.innerHTML = `
-        <td data-label="Ticker"><span class="ticker">${c.ticker}</span></td>
-        <td data-label="Event">${fmtDate(c.event_date)}</td>
-        <td data-label="Score"><span class="score ${scoreClass(c.score)}">${c.score == null ? '—' : c.score.toFixed(2)}</span></td>
-        <td data-label="Realized" class="num">${fmtPct(c.realized_move_pct)}</td>
-        <td data-label="Baseline" class="num">${fmtNum(c.trailing_baseline_pct, 2)}%</td>
-        <td data-label="Ratio" class="num">${c.move_ratio == null ? '—' : c.move_ratio.toFixed(2) + 'x'}</td>
-        <td data-label="Outcome"><span class="outcome ${outcomeClass}">${c.outcome}</span></td>
-      `;
-      body.appendChild(tr);
-    }
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Event</th>
+            <th class="num">Score</th>
+            <th class="num">Realized</th>
+            <th class="num">Baseline</th>
+            <th class="num">Ratio</th>
+            <th>Outcome</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted.map(c => {
+            const cls = (c.outcome || '').toLowerCase();
+            const outClass = cls === 'hit' ? 'hit' : cls === 'miss' ? 'miss' : 'inv';
+            const d = new Date(c.event_date + 'T12:00:00');
+            const ev = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            return `
+              <tr>
+                <td><span class="tk">${c.ticker}</span></td>
+                <td>${ev}</td>
+                <td class="num">${c.score != null ? c.score.toFixed(1) : '—'}</td>
+                <td class="num">${fmtPct(c.realized_move_pct)}</td>
+                <td class="num">${fmtBase(c.trailing_baseline_pct)}</td>
+                <td class="num">${c.move_ratio != null ? c.move_ratio.toFixed(2) + 'x' : '—'}</td>
+                <td><span class="out ${outClass}">${c.outcome}</span></td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
   }
 
-  function setupSorting() {
-    document.querySelectorAll('section').forEach((sec) => {
-      const tbody = sec.querySelector('tbody');
-      if (!tbody) return;
-      const isPending = tbody.id === 'pending-body';
-
-      sec.querySelectorAll('thead th[data-sort]').forEach(th => {
-        th.addEventListener('click', () => {
-          const key = th.dataset.sort;
-          const state = isPending ? pendingSort : resolvedSort;
-          if (state.key === key) {
-            state.dir = state.dir === 'asc' ? 'desc' : 'asc';
-          } else {
-            state.key = key;
-            state.dir = (key === 'score' || key === 'event_date' || key === 'realized_move_pct' || key === 'move_ratio') ? 'desc' : 'asc';
-          }
-          // Update visual state
-          sec.querySelectorAll('thead th').forEach(t => t.classList.remove('sort-active'));
-          th.classList.add('sort-active');
-          th.querySelector('.arrow').textContent = state.dir === 'asc' ? '↑' : '↓';
-          if (isPending) renderPending(); else renderResolved();
-        });
-      });
-    });
-  }
-
-  // ----------- Live bucket chart -----------
+  // ============ Live bucket chart ============
   function renderLiveBuckets(calls) {
-    const container = document.getElementById('live-buckets');
-    const buckets = [
-      { label: '0\u00A0\u2013\u00A02', lo: 0, hi: 2 },
-      { label: '2\u00A0\u2013\u00A04', lo: 2, hi: 4 },
-      { label: '4\u00A0\u2013\u00A06', lo: 4, hi: 6 },
-      { label: '6\u00A0\u2013\u00A010', lo: 6, hi: 10.01 },
-    ];
-
+    const el = document.getElementById('live-buckets');
     const resolved = calls.filter(c => c.outcome === 'HIT' || c.outcome === 'MISS');
-    if (resolved.length === 0) {
-      container.innerHTML = `<div style="font-size:12px; color:var(--ink-mute); padding: 16px 0; line-height: 1.6;">
-        No resolved calls yet. The first row will appear once the engine's earliest pending call resolves (typically the morning after its event date).
+    if (!resolved.length) {
+      el.innerHTML = `<div style="font-size:12px;color:var(--ink-3);line-height:1.55;padding:6px 0;">
+        Live performance fills in as calls resolve. First data point will appear the morning after the earliest pending call's event date.
       </div>`;
       return;
     }
-
-    container.innerHTML = '';
-    for (const b of buckets) {
-      const inBucket = resolved.filter(c => c.score >= b.lo && c.score < b.hi);
-      const hits = inBucket.filter(c => c.outcome === 'HIT').length;
-      const n = inBucket.length;
+    const buckets = [
+      { lab: '0 – 2', lo: 0, hi: 2 },
+      { lab: '2 – 4', lo: 2, hi: 4 },
+      { lab: '4 – 6', lo: 4, hi: 6 },
+      { lab: '6+',    lo: 6, hi: 11 },
+    ];
+    el.innerHTML = buckets.map(b => {
+      const inb = resolved.filter(c => c.score >= b.lo && c.score < b.hi);
+      const hits = inb.filter(c => c.outcome === 'HIT').length;
+      const n = inb.length;
       const rate = n > 0 ? hits / n * 100 : 0;
-      const isZero = n === 0;
-
-      const row = document.createElement('div');
-      row.className = 'row';
-      row.innerHTML = `
-        <div class="label-cell">${b.label}</div>
-        <div class="bar-cell">
-          <div class="bar ${isZero ? 'zero' : ''}" style="width: ${isZero ? 100 : rate}%"></div>
-        </div>
-        <div class="value-cell">${n === 0 ? '—' : rate.toFixed(1) + '%'}<span class="n">N=${n}</span></div>
-      `;
-      container.appendChild(row);
-    }
+      const zero = n === 0;
+      return `
+        <div class="barrow">
+          <div class="lab">${b.lab}</div>
+          <div class="track"><div class="fill ${zero ? 'zero' : ''}" style="width:${zero ? 0 : rate}%"></div></div>
+          <div class="val">${zero ? '—' : rate.toFixed(0) + '%'}<span class="n">N = ${n}</span></div>
+        </div>`;
+    }).join('');
   }
 
-  // ----------- Wire everything -----------
+  // ============ Load ============
   async function load() {
     try {
-      // Relative path - works when served from docs/ via GitHub Pages
-      // Falls back to raw.githubusercontent.com if relative fails (e.g. opened from file://)
-      let csvText;
+      let txt;
       try {
-        const resp = await fetch('../live_log/calls.csv', { cache: 'no-store' });
-        if (!resp.ok) throw new Error('relative fetch failed');
-        csvText = await resp.text();
+        const r = await fetch('../live_log/calls.csv', { cache: 'no-store' });
+        if (!r.ok) throw new Error('relative fetch failed');
+        txt = await r.text();
       } catch (_) {
-        const resp = await fetch('https://raw.githubusercontent.com/pawarraj8888/catalyst-engine/main/live_log/calls.csv', { cache: 'no-store' });
-        csvText = await resp.text();
+        const r = await fetch('https://raw.githubusercontent.com/pawarraj8888/catalyst-engine/main/live_log/calls.csv', { cache: 'no-store' });
+        txt = await r.text();
       }
-
-      const parsed = parseCSV(csvText);
-      const calls = parsed.rows.map(r => ({
+      const rows = parseCSV(txt);
+      const calls = rows.map(r => ({
         timestamp: r.timestamp,
         ticker: (r.ticker || '').toUpperCase(),
         catalyst_type: r.catalyst_type || 'earnings',
         event_date: r.event_date,
-        score: parseFloatSafe(r.score),
-        trailing_baseline_pct: parseFloatSafe(r.trailing_baseline_pct),
-        realized_move_pct: parseFloatSafe(r.realized_move_pct),
-        abs_move_pct: parseFloatSafe(r.abs_move_pct),
-        move_ratio: parseFloatSafe(r.move_ratio),
+        score: pf(r.score),
+        trailing_baseline_pct: pf(r.trailing_baseline_pct),
+        realized_move_pct: pf(r.realized_move_pct),
+        move_ratio: pf(r.move_ratio),
         outcome: r.outcome || 'PENDING',
-        _rules_raw: r.rules_fired,
+        _rules: r.rules_fired,
       }));
+      const pending  = calls.filter(c => c.outcome === 'PENDING');
+      const resolved = calls.filter(c => c.outcome === 'HIT' || c.outcome === 'MISS' || c.outcome === 'INVALIDATED');
 
-      pendingRows = calls.filter(c => c.outcome === 'PENDING');
-      resolvedRows = calls.filter(c => c.outcome === 'HIT' || c.outcome === 'MISS' || c.outcome === 'INVALIDATED');
-
+      renderHero(pending);
       renderKPIs(calls);
-      renderPending();
-      renderResolved();
+      renderUpcoming(pending);
+      renderRecord(resolved);
       renderLiveBuckets(calls);
-      setupSorting();
     } catch (err) {
-      console.error('Dashboard load failed:', err);
-      document.getElementById('last-scan').textContent = 'data unavailable';
-      document.querySelectorAll('.kpi .value').forEach(el => el.textContent = '—');
+      console.error('Load error', err);
+      document.getElementById('hero').innerHTML = `
+        <div>
+          <div class="eyebrow">Could not load data</div>
+          <div class="h1placeholder">Check that live_log/calls.csv is accessible.</div>
+        </div>`;
     }
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', load);
-  } else {
-    load();
-  }
+  document.readyState === 'loading'
+    ? document.addEventListener('DOMContentLoaded', load)
+    : load();
 })();
 </script>
 
