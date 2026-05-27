@@ -1,0 +1,2 @@
+data/processed/*.duckdb filter=lfs diff=lfs merge=lfs -text
+data/processed/*.duckdb.wal filter=lfs diff=lfs merge=lfs -text

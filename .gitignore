@@ -29,7 +29,7 @@ env/
 *.swo
 .DS_Store
 
-# Data — never commit raw or processed data
+# Data — never commit raw or interim. Processed warehouse IS tracked via LFS.
 data/raw/*
 data/interim/*
 data/processed/*
@@ -37,6 +37,7 @@ data/external/*
 !data/raw/.gitkeep
 !data/interim/.gitkeep
 !data/processed/.gitkeep
+!data/processed/catalyst.duckdb
 !data/external/.gitkeep
 
 # DuckDB warehouse
