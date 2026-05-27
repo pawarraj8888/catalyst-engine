@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catalyst Engine · Live Calls Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Geist:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ---------- Design tokens ---------- */
+  :root {
+    --paper:        #FAF8F3;
+    --paper-warm:   #F4F1EA;
+    --ink:          #0E1A2B;
+    --ink-soft:     #3E4A5C;
+    --ink-mute:     #6B7686;
+    --rule:         rgba(14, 26, 43, 0.08);
+    --rule-strong:  rgba(14, 26, 43, 0.15);
+    --hit:          #2C7148;
+    --hit-bg:       rgba(44, 113, 72, 0.08);
+    --miss:         #B85C2A;
+    --miss-bg:      rgba(184, 92, 42, 0.08);
+    --pending:      #6B7686;
+    --pending-bg:   rgba(107, 118, 134, 0.08);
+    --gold:         #B8956A;
+    --gold-soft:    rgba(184, 149, 106, 0.12);
+    --glass-bg:     rgba(255, 255, 255, 0.55);
+    --glass-border: rgba(255, 255, 255, 0.7);
+    --glass-shadow: 0 1px 2px rgba(14,26,43,0.04), 0 12px 32px -8px rgba(14,26,43,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.55;
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+  }
+
+  /* Atmosphere: layered soft gradients that suggest depth without distraction */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: -2;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 0%, rgba(184, 149, 106, 0.10), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 30%, rgba(44, 113, 72, 0.05), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 50% 100%, rgba(14, 26, 43, 0.04), transparent 60%);
+    pointer-events: none;
+  }
+
+  /* Faint paper grain */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: -1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.05  0 0 0 0 0.10  0 0 0 0 0.17  0 0 0 0.025 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    pointer-events: none; mix-blend-mode: multiply; opacity: 0.6;
+  }
+
+  /* ---------- Layout ---------- */
+  .container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 56px 40px 96px;
+  }
+
+  /* ---------- Masthead ---------- */
+  header.masthead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 28px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--rule);
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .brand h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 38px;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+    color: var(--ink);
+    font-variation-settings: "opsz" 96;
+  }
+
+  .brand .tagline {
+    margin-top: 6px;
+    font-size: 14px;
+    color: var(--ink-mute);
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+
+  .masthead-meta {
+    text-align: right;
+    font-size: 12px;
+    color: var(--ink-mute);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.02em;
+  }
+
+  .masthead-meta .label {
+    display: block;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-mute);
+    margin-bottom: 4px;
+  }
+
+  .masthead-meta .value {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  /* ---------- Glass card primitive ---------- */
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    box-shadow: var(--glass-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  /* ---------- KPI row ---------- */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .kpi {
+    padding: 22px 24px;
+  }
+
+  .kpi .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-mute);
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  .kpi .value {
+    font-family: 'Fraunces', serif;
+    font-size: 36px;
+    font-weight: 500;
+    color: var(--ink);
+    line-height: 1.0;
+    font-variation-settings: "opsz" 96;
+    letter-spacing: -0.01em;
+  }
+
+  .kpi .delta {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--ink-mute);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.02em;
+  }
+
+  .kpi.accent .value { color: var(--gold); }
+
+  /* ---------- Section heads ---------- */
+  section { margin-bottom: 56px; }
+
+  section header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  section h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+    font-variation-settings: "opsz" 36;
+  }
+
+  section .meta {
+    font-size: 12px;
+    color: var(--ink-mute);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ---------- Table ---------- */
+  .table-wrap {
+    padding: 4px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-mute);
+    font-weight: 600;
+    border-bottom: 1px solid var(--rule-strong);
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.15s;
+  }
+
+  thead th:hover { color: var(--ink); }
+  thead th.sort-active { color: var(--ink); }
+  thead th .arrow {
+    display: inline-block;
+    margin-left: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  thead th.sort-active .arrow { opacity: 1; }
+
+  tbody td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rule);
+    color: var(--ink-soft);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(184, 149, 106, 0.04); }
+
+  .ticker {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 13px;
+    letter-spacing: 0.01em;
+  }
+
+  .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Score badge */
+  .score {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    line-height: 1.4;
+  }
+
+  .score.s0 { background: rgba(107,118,134,0.10); color: var(--ink-mute); }
+  .score.s1 { background: rgba(107,118,134,0.16); color: var(--ink-soft); }
+  .score.s2 { background: rgba(184, 149, 106, 0.18); color: #8B6F3D; }
+  .score.s3 { background: rgba(184, 149, 106, 0.30); color: #6B5424; }
+  .score.s4 { background: rgba(44, 113, 72, 0.18); color: var(--hit); }
+  .score.s5 { background: var(--hit); color: white; }
+
+  /* Outcome pills */
+  .outcome {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  .outcome.hit       { background: var(--hit-bg); color: var(--hit); }
+  .outcome.miss      { background: var(--miss-bg); color: var(--miss); }
+  .outcome.pending   { background: var(--pending-bg); color: var(--pending); }
+  .outcome.invalidated { background: rgba(107,118,134,0.08); color: var(--ink-mute); }
+
+  .rules {
+    font-size: 11px;
+    color: var(--ink-mute);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
+    max-width: 380px;
+  }
+
+  /* ---------- Empty state ---------- */
+  .empty {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--ink-mute);
+  }
+  .empty .icon {
+    width: 28px; height: 28px;
+    margin: 0 auto 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    position: relative;
+  }
+  .empty .icon::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(circle, var(--gold) 1.5px, transparent 2px);
+    border-radius: 50%;
+  }
+  .empty h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    color: var(--ink-soft);
+    font-size: 16px;
+    margin-bottom: 6px;
+  }
+  .empty p {
+    font-size: 13px;
+    max-width: 380px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Bucket chart ---------- */
+  .buckets {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .bucket-panel { padding: 24px 28px; }
+
+  .bucket-panel h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+    letter-spacing: 0;
+  }
+
+  .bucket-panel .desc {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-bottom: 22px;
+    line-height: 1.5;
+  }
+
+  .bar-chart .row {
+    display: grid;
+    grid-template-columns: 56px 1fr 60px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+
+  .bar-chart .label-cell {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink-mute);
+    font-size: 11px;
+  }
+
+  .bar-chart .bar-cell {
+    position: relative;
+    height: 28px;
+    background: rgba(14, 26, 43, 0.04);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .bar-chart .bar {
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--gold-soft), var(--gold));
+    border-radius: 4px;
+    transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .bar-chart .bar.zero {
+    background: var(--rule);
+  }
+
+  .bar-chart .ci {
+    position: absolute;
+    top: 50%;
+    height: 1px;
+    background: rgba(14, 26, 43, 0.45);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  .bar-chart .ci::before, .bar-chart .ci::after {
+    content: ''; position: absolute; top: -3px; width: 1px; height: 7px;
+    background: rgba(14, 26, 43, 0.45);
+  }
+  .bar-chart .ci::before { left: 0; }
+  .bar-chart .ci::after { right: 0; }
+
+  .bar-chart .value-cell {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    font-weight: 500;
+    font-size: 11px;
+  }
+  .bar-chart .value-cell .n {
+    display: block;
+    font-size: 9px;
+    color: var(--ink-mute);
+    font-weight: 400;
+    margin-top: 1px;
+  }
+
+  /* ---------- Methodology / footer ---------- */
+  .methodology {
+    padding: 32px 36px;
+    line-height: 1.65;
+  }
+
+  .methodology h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 16px;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+
+  .methodology p {
+    font-size: 13px;
+    color: var(--ink-soft);
+    max-width: 720px;
+  }
+
+  .methodology p + p { margin-top: 10px; }
+
+  .methodology .links {
+    margin-top: 22px;
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+  }
+
+  .methodology a {
+    font-size: 12px;
+    color: var(--gold);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    border-bottom: 1px solid var(--gold-soft);
+    padding-bottom: 1px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .methodology a:hover {
+    color: #8B6F3D;
+    border-bottom-color: var(--gold);
+  }
+
+  footer.colophon {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ink-mute);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.02em;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  /* Page-load reveal */
+  .reveal {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: reveal 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+  .reveal:nth-of-type(1) { animation-delay: 0.05s; }
+  .reveal:nth-of-type(2) { animation-delay: 0.15s; }
+  .reveal:nth-of-type(3) { animation-delay: 0.25s; }
+  .reveal:nth-of-type(4) { animation-delay: 0.35s; }
+  .reveal:nth-of-type(5) { animation-delay: 0.45s; }
+  .reveal:nth-of-type(6) { animation-delay: 0.55s; }
+
+  @keyframes reveal {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .container { padding: 40px 24px 80px; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .buckets { grid-template-columns: 1fr; }
+    .brand h1 { font-size: 30px; }
+    thead th, tbody td { padding: 10px 12px; }
+    .rules { max-width: 240px; }
+  }
+  @media (max-width: 600px) {
+    .kpis { grid-template-columns: 1fr; }
+    table thead { display: none; }
+    table tbody tr {
+      display: block;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--rule);
+    }
+    table tbody td {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border: none;
+    }
+    table tbody td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ============ MASTHEAD ============ -->
+  <header class="masthead reveal">
+    <div class="brand">
+      <h1>Catalyst Engine</h1>
+      <div class="tagline">A single-name event tracking system for discretionary equity desks</div>
+    </div>
+    <div class="masthead-meta">
+      <span class="label">Last scan</span>
+      <span class="value" id="last-scan">loading</span>
+    </div>
+  </header>
+
+  <!-- ============ KPI ROW ============ -->
+  <div class="kpis reveal">
+    <div class="kpi glass">
+      <div class="label">Calls logged</div>
+      <div class="value" id="kpi-total">—</div>
+      <div class="delta" id="kpi-total-delta">all time</div>
+    </div>
+    <div class="kpi glass">
+      <div class="label">Pending</div>
+      <div class="value" id="kpi-pending">—</div>
+      <div class="delta" id="kpi-pending-delta">awaiting outcome</div>
+    </div>
+    <div class="kpi glass accent">
+      <div class="label">Hit rate</div>
+      <div class="value" id="kpi-hitrate">—</div>
+      <div class="delta" id="kpi-hitrate-delta">resolved calls</div>
+    </div>
+    <div class="kpi glass">
+      <div class="label">Discipline</div>
+      <div class="value" id="kpi-discipline">—</div>
+      <div class="delta" id="kpi-discipline-delta">to trusted N=30</div>
+    </div>
+  </div>
+
+  <!-- ============ UPCOMING (PENDING) ============ -->
+  <section class="reveal">
+    <header>
+      <h2>Upcoming calls</h2>
+      <span class="meta" id="pending-meta">—</span>
+    </header>
+    <div class="glass table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="ticker">Ticker<span class="arrow">↑</span></th>
+            <th data-sort="event_date">Event date<span class="arrow">↑</span></th>
+            <th data-sort="catalyst_type">Type<span class="arrow">↑</span></th>
+            <th data-sort="score" class="sort-active">Score<span class="arrow">↓</span></th>
+            <th data-sort="trailing_baseline_pct" class="num">Baseline<span class="arrow">↑</span></th>
+            <th>Rules fired</th>
+          </tr>
+        </thead>
+        <tbody id="pending-body"></tbody>
+      </table>
+      <div class="empty" id="pending-empty" style="display:none">
+        <div class="icon"></div>
+        <h3>No pending calls</h3>
+        <p>The next scan will run on the morning of the next weekday session and surface upcoming catalysts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRACK RECORD ============ -->
+  <section class="reveal">
+    <header>
+      <h2>Resolved track record</h2>
+      <span class="meta" id="resolved-meta">—</span>
+    </header>
+    <div class="glass table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="ticker">Ticker<span class="arrow">↑</span></th>
+            <th data-sort="event_date" class="sort-active">Event<span class="arrow">↓</span></th>
+            <th data-sort="score">Score<span class="arrow">↑</span></th>
+            <th data-sort="realized_move_pct" class="num">Realized<span class="arrow">↑</span></th>
+            <th data-sort="trailing_baseline_pct" class="num">Baseline<span class="arrow">↑</span></th>
+            <th data-sort="move_ratio" class="num">Ratio<span class="arrow">↑</span></th>
+            <th data-sort="outcome">Outcome<span class="arrow">↑</span></th>
+          </tr>
+        </thead>
+        <tbody id="resolved-body"></tbody>
+      </table>
+      <div class="empty" id="resolved-empty" style="display:none">
+        <div class="icon"></div>
+        <h3>No resolved calls yet</h3>
+        <p>The first calls will resolve the morning after their event date. Until then, every pending call is awaiting its print.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PERFORMANCE PANELS ============ -->
+  <section class="reveal">
+    <header>
+      <h2>Performance</h2>
+      <span class="meta">live + historical backtest</span>
+    </header>
+    <div class="buckets">
+
+      <div class="bucket-panel glass">
+        <h3>Live: hit rate by score bucket</h3>
+        <p class="desc">Outcomes from real-time calls only. Weights remain frozen until N&nbsp;≥&nbsp;30 resolved calls.</p>
+        <div class="bar-chart" id="live-buckets"></div>
+      </div>
+
+      <div class="bucket-panel glass">
+        <h3>Backtest: hit rate by score bucket</h3>
+        <p class="desc">2,881 evaluable earnings events, 5-year history. 95% bootstrap CIs (1,000 resamples).</p>
+        <div class="bar-chart">
+          <div class="row">
+            <div class="label-cell">0&nbsp;–&nbsp;2</div>
+            <div class="bar-cell"><div class="bar" style="width: 48.9%"></div><div class="ci" style="left: 46.6%; width: 4.6%"></div></div>
+            <div class="value-cell">48.9%<span class="n">N=1,760</span></div>
+          </div>
+          <div class="row">
+            <div class="label-cell">2&nbsp;–&nbsp;4</div>
+            <div class="bar-cell"><div class="bar" style="width: 52.2%"></div><div class="ci" style="left: 48.2%; width: 8.0%"></div></div>
+            <div class="value-cell">52.2%<span class="n">N=596</span></div>
+          </div>
+          <div class="row">
+            <div class="label-cell">4&nbsp;–&nbsp;6</div>
+            <div class="bar-cell"><div class="bar" style="width: 57.9%"></div><div class="ci" style="left: 36.8%; width: 42.1%"></div></div>
+            <div class="value-cell">57.9%<span class="n">N=19</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ METHODOLOGY ============ -->
+  <section class="reveal">
+    <header>
+      <h2>Methodology &amp; honest findings</h2>
+    </header>
+    <div class="glass methodology">
+      <h3>What this is</h3>
+      <p>Catalyst Engine tracks ~250 US large-caps across Healthcare, Consumer, Tech, and Industrials. Each weekday morning a scheduled job scores upcoming earnings catalysts and appends new calls to a public log. Each weekday evening, calls whose event date has passed are resolved against realized 1-day price moves and classified HIT or MISS against the trailing 8-quarter baseline. Misses receive a written post-mortem.</p>
+
+      <h3 style="margin-top: 22px">What the backtest says</h3>
+      <p>On free large-cap data with rule-based scoring, the V0 engine performs at approximately the efficient-markets baseline. Bucket 4-6 trends positive but N is too small to call a result. The infrastructure, PIT discipline, and 10b5-1 filtering are the contribution; the live track record is the deliverable.</p>
+
+      <h3 style="margin-top: 22px">Findings worth keeping</h3>
+      <p>Large-cap insider buys are rare: 1,760 open-market buys versus 103,345 sales across 5 years. The Cohen-Malloy-Pomorski cluster-buy signal fires only 3 times across the entire universe. The literature edge lives in small-caps, not the S&amp;P 500. Vol clustering signals are arbed out. Net selling above $5M (excluding 10b5-1 pre-planned trades) shows weak directional signal but below significance.</p>
+
+      <div class="links">
+        <a href="https://github.com/pawarraj8888/catalyst-engine">Repository</a>
+        <a href="https://github.com/pawarraj8888/catalyst-engine/blob/main/live_log/calls.csv">Raw calls log</a>
+        <a href="https://github.com/pawarraj8888/catalyst-engine/tree/main/live_log/postmortems">Post-mortems</a>
+        <a href="https://github.com/pawarraj8888/catalyst-engine/blob/main/docs/methodology.md">Full methodology</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Catalyst Engine · built by Raj Pawar</span>
+    <span id="schema-tag">schema v1</span>
+  </footer>
+
+</div>
+
+<!-- ============================= DATA LAYER ============================= -->
+<script>
+(function () {
+  'use strict';
+
+  // ----------- CSV parsing (minimal, schema-aware) -----------
+  function parseCSV(text) {
+    const lines = text.replace(/\r\n/g, '\n').split('\n').filter(l => l.length > 0 && !l.startsWith('#'));
+    if (lines.length === 0) return { columns: [], rows: [] };
+    const columns = splitCSVLine(lines[0]);
+    const rows = lines.slice(1).map(line => {
+      const cells = splitCSVLine(line);
+      const obj = {};
+      columns.forEach((col, i) => obj[col] = cells[i] || '');
+      return obj;
+    }).filter(r => r.event_date && r.ticker);
+    return { columns, rows };
+  }
+
+  function splitCSVLine(line) {
+    // Handle quoted fields with commas (JSON in score_components, etc.)
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && line[i+1] === '"' && inQuotes) { cur += '"'; i++; continue; }
+      if (ch === '"') { inQuotes = !inQuotes; continue; }
+      if (ch === ',' && !inQuotes) { out.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    out.push(cur);
+    return out;
+  }
+
+  function parseFloatSafe(s) {
+    if (s == null || s === '') return null;
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+
+  // ----------- Formatting -----------
+  const fmtPct = (n, digits=2) => n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(digits) + '%';
+  const fmtNum = (n, digits=2) => n == null ? '—' : n.toFixed(digits);
+  const fmtDate = (s) => {
+    if (!s) return '—';
+    const d = new Date(s + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  const fmtRelative = (iso) => {
+    if (!iso) return '—';
+    const then = new Date(iso);
+    const now = new Date();
+    const diffSec = (now - then) / 1000;
+    if (diffSec < 60) return 'just now';
+    if (diffSec < 3600) return Math.floor(diffSec / 60) + 'm ago';
+    if (diffSec < 86400) return Math.floor(diffSec / 3600) + 'h ago';
+    if (diffSec < 7 * 86400) return Math.floor(diffSec / 86400) + 'd ago';
+    return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  function scoreClass(s) {
+    if (s == null) return 's0';
+    if (s < 0.5) return 's0';
+    if (s < 1.5) return 's1';
+    if (s < 2.5) return 's2';
+    if (s < 4.0) return 's3';
+    if (s < 6.0) return 's4';
+    return 's5';
+  }
+
+  function formatRules(r) {
+    if (!r) return '<span style="opacity:0.5">(none)</span>';
+    return r.split('|').filter(Boolean).map(x => x.replace(/_/g, ' ')).join(', ');
+  }
+
+  // ----------- KPIs -----------
+  function renderKPIs(calls) {
+    const total = calls.length;
+    const pending = calls.filter(c => c.outcome === 'PENDING').length;
+    const hits = calls.filter(c => c.outcome === 'HIT').length;
+    const misses = calls.filter(c => c.outcome === 'MISS').length;
+    const resolved = hits + misses;
+    const hitRate = resolved > 0 ? (hits / resolved * 100) : null;
+    const lastTs = calls.length > 0 ? calls.map(c => c.timestamp).filter(Boolean).sort().pop() : null;
+
+    document.getElementById('kpi-total').textContent = total;
+    document.getElementById('kpi-pending').textContent = pending;
+    document.getElementById('kpi-hitrate').textContent = hitRate == null ? '—' : hitRate.toFixed(1) + '%';
+    document.getElementById('kpi-hitrate-delta').textContent = resolved + ' resolved';
+
+    if (resolved >= 30) {
+      document.getElementById('kpi-discipline').textContent = 'live';
+      document.getElementById('kpi-discipline-delta').textContent = 'weights trusted';
+    } else {
+      document.getElementById('kpi-discipline').textContent = resolved + '/30';
+      document.getElementById('kpi-discipline-delta').textContent = (30 - resolved) + ' to go';
+    }
+
+    document.getElementById('last-scan').textContent = fmtRelative(lastTs);
+  }
+
+  // ----------- Tables -----------
+  let pendingRows = [];
+  let resolvedRows = [];
+  let pendingSort = { key: 'score', dir: 'desc' };
+  let resolvedSort = { key: 'event_date', dir: 'desc' };
+
+  function compare(a, b, key, dir) {
+    let va = a[key], vb = b[key];
+    if (typeof va === 'number' || typeof vb === 'number') {
+      va = va == null ? -Infinity : va;
+      vb = vb == null ? -Infinity : vb;
+    }
+    if (va < vb) return dir === 'asc' ? -1 : 1;
+    if (va > vb) return dir === 'asc' ? 1 : -1;
+    return 0;
+  }
+
+  function renderPending() {
+    const body = document.getElementById('pending-body');
+    const empty = document.getElementById('pending-empty');
+    body.innerHTML = '';
+
+    if (pendingRows.length === 0) {
+      empty.style.display = 'block';
+      document.getElementById('pending-meta').textContent = '0 calls';
+      return;
+    }
+    empty.style.display = 'none';
+
+    const sorted = [...pendingRows].sort((a, b) => compare(a, b, pendingSort.key, pendingSort.dir));
+    document.getElementById('pending-meta').textContent = sorted.length + ' awaiting outcome';
+
+    for (const c of sorted) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td data-label="Ticker"><span class="ticker">${c.ticker}</span></td>
+        <td data-label="Event">${fmtDate(c.event_date)}</td>
+        <td data-label="Type">${c.catalyst_type}</td>
+        <td data-label="Score"><span class="score ${scoreClass(c.score)}">${c.score == null ? '—' : c.score.toFixed(2)}</span></td>
+        <td data-label="Baseline" class="num">${fmtNum(c.trailing_baseline_pct, 2)}%</td>
+        <td data-label="Rules"><div class="rules">${formatRules(c._rules_raw)}</div></td>
+      `;
+      body.appendChild(tr);
+    }
+  }
+
+  function renderResolved() {
+    const body = document.getElementById('resolved-body');
+    const empty = document.getElementById('resolved-empty');
+    body.innerHTML = '';
+
+    if (resolvedRows.length === 0) {
+      empty.style.display = 'block';
+      document.getElementById('resolved-meta').textContent = '0 resolved';
+      return;
+    }
+    empty.style.display = 'none';
+
+    const sorted = [...resolvedRows].sort((a, b) => compare(a, b, resolvedSort.key, resolvedSort.dir));
+    document.getElementById('resolved-meta').textContent = sorted.length + ' resolved';
+
+    for (const c of sorted) {
+      const tr = document.createElement('tr');
+      const outcomeClass = (c.outcome || '').toLowerCase();
+      tr.innerHTML = `
+        <td data-label="Ticker"><span class="ticker">${c.ticker}</span></td>
+        <td data-label="Event">${fmtDate(c.event_date)}</td>
+        <td data-label="Score"><span class="score ${scoreClass(c.score)}">${c.score == null ? '—' : c.score.toFixed(2)}</span></td>
+        <td data-label="Realized" class="num">${fmtPct(c.realized_move_pct)}</td>
+        <td data-label="Baseline" class="num">${fmtNum(c.trailing_baseline_pct, 2)}%</td>
+        <td data-label="Ratio" class="num">${c.move_ratio == null ? '—' : c.move_ratio.toFixed(2) + 'x'}</td>
+        <td data-label="Outcome"><span class="outcome ${outcomeClass}">${c.outcome}</span></td>
+      `;
+      body.appendChild(tr);
+    }
+  }
+
+  function setupSorting() {
+    document.querySelectorAll('section').forEach((sec) => {
+      const tbody = sec.querySelector('tbody');
+      if (!tbody) return;
+      const isPending = tbody.id === 'pending-body';
+
+      sec.querySelectorAll('thead th[data-sort]').forEach(th => {
+        th.addEventListener('click', () => {
+          const key = th.dataset.sort;
+          const state = isPending ? pendingSort : resolvedSort;
+          if (state.key === key) {
+            state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+          } else {
+            state.key = key;
+            state.dir = (key === 'score' || key === 'event_date' || key === 'realized_move_pct' || key === 'move_ratio') ? 'desc' : 'asc';
+          }
+          // Update visual state
+          sec.querySelectorAll('thead th').forEach(t => t.classList.remove('sort-active'));
+          th.classList.add('sort-active');
+          th.querySelector('.arrow').textContent = state.dir === 'asc' ? '↑' : '↓';
+          if (isPending) renderPending(); else renderResolved();
+        });
+      });
+    });
+  }
+
+  // ----------- Live bucket chart -----------
+  function renderLiveBuckets(calls) {
+    const container = document.getElementById('live-buckets');
+    const buckets = [
+      { label: '0\u00A0\u2013\u00A02', lo: 0, hi: 2 },
+      { label: '2\u00A0\u2013\u00A04', lo: 2, hi: 4 },
+      { label: '4\u00A0\u2013\u00A06', lo: 4, hi: 6 },
+      { label: '6\u00A0\u2013\u00A010', lo: 6, hi: 10.01 },
+    ];
+
+    const resolved = calls.filter(c => c.outcome === 'HIT' || c.outcome === 'MISS');
+    if (resolved.length === 0) {
+      container.innerHTML = `<div style="font-size:12px; color:var(--ink-mute); padding: 16px 0; line-height: 1.6;">
+        No resolved calls yet. The first row will appear once the engine's earliest pending call resolves (typically the morning after its event date).
+      </div>`;
+      return;
+    }
+
+    container.innerHTML = '';
+    for (const b of buckets) {
+      const inBucket = resolved.filter(c => c.score >= b.lo && c.score < b.hi);
+      const hits = inBucket.filter(c => c.outcome === 'HIT').length;
+      const n = inBucket.length;
+      const rate = n > 0 ? hits / n * 100 : 0;
+      const isZero = n === 0;
+
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <div class="label-cell">${b.label}</div>
+        <div class="bar-cell">
+          <div class="bar ${isZero ? 'zero' : ''}" style="width: ${isZero ? 100 : rate}%"></div>
+        </div>
+        <div class="value-cell">${n === 0 ? '—' : rate.toFixed(1) + '%'}<span class="n">N=${n}</span></div>
+      `;
+      container.appendChild(row);
+    }
+  }
+
+  // ----------- Wire everything -----------
+  async function load() {
+    try {
+      // Relative path - works when served from docs/ via GitHub Pages
+      // Falls back to raw.githubusercontent.com if relative fails (e.g. opened from file://)
+      let csvText;
+      try {
+        const resp = await fetch('../live_log/calls.csv', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('relative fetch failed');
+        csvText = await resp.text();
+      } catch (_) {
+        const resp = await fetch('https://raw.githubusercontent.com/pawarraj8888/catalyst-engine/main/live_log/calls.csv', { cache: 'no-store' });
+        csvText = await resp.text();
+      }
+
+      const parsed = parseCSV(csvText);
+      const calls = parsed.rows.map(r => ({
+        timestamp: r.timestamp,
+        ticker: (r.ticker || '').toUpperCase(),
+        catalyst_type: r.catalyst_type || 'earnings',
+        event_date: r.event_date,
+        score: parseFloatSafe(r.score),
+        trailing_baseline_pct: parseFloatSafe(r.trailing_baseline_pct),
+        realized_move_pct: parseFloatSafe(r.realized_move_pct),
+        abs_move_pct: parseFloatSafe(r.abs_move_pct),
+        move_ratio: parseFloatSafe(r.move_ratio),
+        outcome: r.outcome || 'PENDING',
+        _rules_raw: r.rules_fired,
+      }));
+
+      pendingRows = calls.filter(c => c.outcome === 'PENDING');
+      resolvedRows = calls.filter(c => c.outcome === 'HIT' || c.outcome === 'MISS' || c.outcome === 'INVALIDATED');
+
+      renderKPIs(calls);
+      renderPending();
+      renderResolved();
+      renderLiveBuckets(calls);
+      setupSorting();
+    } catch (err) {
+      console.error('Dashboard load failed:', err);
+      document.getElementById('last-scan').textContent = 'data unavailable';
+      document.querySelectorAll('.kpi .value').forEach(el => el.textContent = '—');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', load);
+  } else {
+    load();
+  }
+})();
+</script>
+
+</body>
+</html>
