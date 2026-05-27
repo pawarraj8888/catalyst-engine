@@ -199,6 +199,31 @@ CREATE INDEX IF NOT EXISTS idx_realized_moves_event_date ON realized_moves (even
 
 
 -- ------------------------------------------------------------------
+-- scored_setups — output of the scoring engine, one row per (ticker, event, run)
+-- ------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS scored_setups (
+    ticker             VARCHAR NOT NULL,
+    event_date         DATE NOT NULL,
+    catalyst_type      VARCHAR NOT NULL,             -- earnings | 8k | fda | guidance
+    score              DECIMAL(6, 2) NOT NULL,       -- final score, 0-10
+    rules_fired        VARCHAR[],                    -- which rules contributed
+    score_components   JSON,                         -- {rule_name: weight_contributed}
+    realized_move_1d   DECIMAL(10, 6),               -- joined from realized_moves for convenience
+    abs_move_1d        DECIMAL(10, 6),
+    trailing_median    DECIMAL(10, 6),
+    move_ratio         DECIMAL(10, 4),
+    is_hit             BOOLEAN,                      -- abs_move_1d > trailing_median
+    score_as_of        TIMESTAMP NOT NULL,           -- PIT moment used for feature lookups
+    computed_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    run_id             UUID,                         -- which backtest run produced this
+    PRIMARY KEY (ticker, event_date, catalyst_type, score_as_of)
+);
+
+CREATE INDEX IF NOT EXISTS idx_scored_setups_run ON scored_setups (run_id);
+CREATE INDEX IF NOT EXISTS idx_scored_setups_score ON scored_setups (score);
+
+
+-- ------------------------------------------------------------------
 -- ingestion_runs — observability: what ran, when, what came back
 -- ------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ingestion_runs (

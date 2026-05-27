@@ -35,10 +35,12 @@ universe_app = typer.Typer(no_args_is_help=True, help="Universe management.")
 ingest_app = typer.Typer(no_args_is_help=True, help="Data ingestion pipelines.")
 backtest_app = typer.Typer(no_args_is_help=True, help="Backtest commands.")
 features_app = typer.Typer(no_args_is_help=True, help="Feature computation.")
+data_app = typer.Typer(no_args_is_help=True, help="Data quality tools.")
 app.add_typer(universe_app, name="universe")
 app.add_typer(ingest_app, name="ingest")
 app.add_typer(backtest_app, name="backtest")
 app.add_typer(features_app, name="features")
+app.add_typer(data_app, name="data")
 
 console = Console()
 log = get_logger(__name__)
@@ -201,7 +203,7 @@ def ingest_earnings(
         if not skip_calendar:
             today = _date.today()
             console.print(
-                f"Pulling earnings calendar: {today} → {today + _td(days=calendar_days)} "
+                f"Pulling earnings calendar: {today} -> {today + _td(days=calendar_days)} "
                 f"(universe filter: {len(tickers)} tickers)"
             )
             total_new_calendar = ingest_calendar_window(
@@ -260,7 +262,7 @@ def ingest_prices(
         start = _date.today() - _td(days=365 * years)
         console.print(
             f"Pulling daily OHLCV: {len(tickers)} tickers, "
-            f"{start} → today, batch_size={batch_size}"
+            f"{start} -> today, batch_size={batch_size}"
         )
         n = ingest_prices_for_universe(conn, tickers=tickers, start=start, batch_size=batch_size)
 
@@ -323,10 +325,69 @@ def ingest_options_snapshot() -> None:
 
 
 @backtest_app.command("replay")
-def backtest_replay() -> None:
-    """[Phase 3] Historical replay of catalyst scoring."""
-    console.print("[yellow]Not yet implemented — Phase 3.[/yellow]")
-    raise typer.Exit(2)
+def backtest_replay(
+    start: str = typer.Option(None, help="ISO start date (e.g. 2023-01-01)"),
+    end: str = typer.Option(None, help="ISO end date"),
+    catalyst_type: str = typer.Option("earnings", help="Which catalyst family"),
+) -> None:
+    """Run a historical backtest: score every past event and report hit rates."""
+    from datetime import date as _date
+
+    from catalyst_engine.backtest.metrics import compute_summary
+    from catalyst_engine.backtest.replay import replay
+    from catalyst_engine.scoring.scorer import load_scoring_config
+
+    config = load_scoring_config()
+    start_date = _date.fromisoformat(start) if start else None
+    end_date = _date.fromisoformat(end) if end else None
+
+    conn = connect()
+    try:
+        console.print(
+            f"[bold]Replaying {catalyst_type} setups[/bold]"
+            f"{' from ' + start if start else ''}"
+            f"{' to ' + end if end else ''}"
+        )
+        run_id, n_written = replay(
+            conn,
+            config=config,
+            catalyst_type=catalyst_type,
+            start=start_date,
+            end=end_date,
+        )
+        console.print(f"[dim]run_id={run_id}, {n_written} rows scored[/dim]\n")
+
+        summary = compute_summary(conn, run_id=str(run_id))
+
+        console.print(
+            f"[bold]Overall:[/bold] {summary.n_evaluable} evaluable setups, "
+            f"hit rate = {summary.overall_hit_rate:.1%}\n"
+        )
+
+        table = Table(title="Hit rate by score bucket (95% bootstrap CI)")
+        table.add_column("Bucket", justify="left")
+        table.add_column("N", justify="right")
+        table.add_column("Hits", justify="right")
+        table.add_column("Rate", justify="right")
+        table.add_column("CI low", justify="right")
+        table.add_column("CI high", justify="right")
+        for b in summary.buckets:
+            table.add_row(
+                b.bucket_label,
+                str(b.n_setups),
+                str(b.n_hits),
+                f"{b.hit_rate:.1%}",
+                f"{b.ci_low_95:.1%}",
+                f"{b.ci_high_95:.1%}",
+            )
+        console.print(table)
+        console.print(
+            "\n[dim]Hit = abs_move_1d > trailing_median_8q. "
+            "V0 rules use only realized-moves history. "
+            "Real lift expected once positioning/skew features land in Phase 2.[/dim]"
+        )
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -364,6 +425,119 @@ def features_realized_moves(
             f"{with_1d[0] if with_1d else 0} with 1d move, "
             f"{with_median[0] if with_median else 0} with trailing median[/bold]"
         )
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# data — quality audits and repairs
+# ---------------------------------------------------------------------------
+
+
+@data_app.command("audit-earnings")
+def data_audit_earnings(
+    threshold: int = typer.Option(50, help="Concentration threshold to flag a date as suspicious"),
+) -> None:
+    """Inspect earnings_events for fake fiscal-period-end dates."""
+    from catalyst_engine.data.earnings_quality import audit_earnings_dates
+
+    conn = connect(read_only=True)
+    try:
+        result = audit_earnings_dates(conn, concentration_threshold=threshold)
+    finally:
+        conn.close()
+
+    console.print(f"[bold]Audit:[/bold] {result.total_events} historical events")
+    if not result.suspicious:
+        console.print("[green]No suspicious quarter-end concentrations. Clean.[/green]")
+        return
+
+    console.print(
+        f"[yellow]{result.n_suspicious_events} events across "
+        f"{result.n_suspicious_dates} suspicious quarter-end dates:[/yellow]\n"
+    )
+    table = Table()
+    table.add_column("event_date")
+    table.add_column("n_tickers", justify="right")
+    for s in result.suspicious:
+        table.add_row(str(s.event_date), str(s.n_tickers))
+    console.print(table)
+    console.print("\nRun [bold]catalyst data clean-earnings[/bold] to drop these rows.")
+
+
+@data_app.command("clean-earnings")
+def data_clean_earnings(
+    threshold: int = typer.Option(50, help="Concentration threshold"),
+    apply: bool = typer.Option(
+        False, "--apply", help="Actually delete. Without this flag, runs dry."
+    ),
+) -> None:
+    """Delete suspicious earnings rows and their downstream realized_moves."""
+    from catalyst_engine.data.earnings_quality import clean_fake_earnings_dates
+
+    conn = connect()
+    try:
+        n_earn, n_moves = clean_fake_earnings_dates(
+            conn, concentration_threshold=threshold, dry_run=not apply
+        )
+    finally:
+        conn.close()
+
+    verb = "[red]Deleted[/red]" if apply else "[yellow]Would delete[/yellow]"
+    console.print(f"{verb}: {n_earn} earnings_events rows, {n_moves} realized_moves rows")
+    if not apply:
+        console.print("\nRe-run with [bold]--apply[/bold] to perform the deletes.")
+
+
+@data_app.command("rebuild-earnings-from-edgar")
+def data_rebuild_from_edgar(
+    apply: bool = typer.Option(
+        False, "--apply", help="Actually insert. Without this flag, runs dry."
+    ),
+) -> None:
+    """Use 8-K item 2.02 filings as the source for announcement dates."""
+    from catalyst_engine.data.earnings_from_edgar import rebuild_from_edgar
+
+    conn = connect()
+    try:
+        stats = rebuild_from_edgar(conn, dry_run=not apply)
+    finally:
+        conn.close()
+
+    console.print("[bold]EDGAR rebuild stats[/bold]")
+    for k, v in stats.items():
+        console.print(f"  {k}: {v}")
+    if not apply:
+        console.print("\nRe-run with [bold]--apply[/bold] to insert announcement-dated rows.")
+
+
+@data_app.command("clear-derived")
+def data_clear_derived(
+    apply: bool = typer.Option(
+        False, "--apply", help="Actually delete. Without this flag, runs dry."
+    ),
+) -> None:
+    """Wipe derived tables (realized_moves, scored_setups).
+
+    Raw data (universe, filings, earnings_events, prices) is preserved.
+    Use this when you've changed feature logic or fixed data and want a
+    clean recompute.
+    """
+    conn = connect()
+    try:
+        n_rm = conn.execute("SELECT COUNT(*) FROM realized_moves").fetchone()[0]
+        n_ss = conn.execute("SELECT COUNT(*) FROM scored_setups").fetchone()[0]
+        if apply:
+            conn.execute("DELETE FROM scored_setups")
+            conn.execute("DELETE FROM realized_moves")
+            console.print(
+                f"[red]Deleted[/red]: {n_rm} realized_moves rows, {n_ss} scored_setups rows"
+            )
+        else:
+            console.print(
+                f"[yellow]Would delete[/yellow]: {n_rm} realized_moves, {n_ss} scored_setups"
+            )
+            console.print("\nRe-run with --apply to actually delete.")
     finally:
         conn.close()
 

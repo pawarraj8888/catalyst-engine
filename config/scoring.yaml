@@ -1,66 +1,75 @@
-# Catalyst scoring rules.
+# Catalyst scoring rules - V0.
 #
-# Each rule fires on a feature condition and contributes a weighted score.
-# Final score per setup = sum(weight) of rules that fire, capped at 10.
+# V0 uses ONLY realized-moves data (no positioning, no options yet).
+# Rules look at trailing event behavior to identify two structural setups:
+#   - Vol compression: recent prints have been calm, vol may expand
+#   - Vol saturation: recent prints have been wild, vol may revert
 #
-# Rules are evaluated by src/catalyst_engine/scoring/scorer.py.
-# Phase 2 will populate this with real rules calibrated against the backtest.
+# These rules are explicitly weak. They exist to wire the pipeline; we
+# expect ~50% hit rate. Real lift comes from Phase 2 (positioning, skew,
+# implied move) consuming this same scoring framework.
+#
+# Each rule:
+#   condition: a Python expression evaluated against the feature dict
+#   weight: contributes to the final score when condition is True
+#   direction: 'up' | 'down' | 'two_way' (informational; not used yet)
 
 version: 1
 last_updated: 2026-05-27
 
-# Score above which a setup is "high conviction" — gets a onepager
-high_conviction_threshold: 7
+# A setup with final score >= this threshold gets a onepager (Phase 4)
+high_conviction_threshold: 6.0
 
 earnings:
-  # Vol cheap into print (placeholder weights — to calibrate in Phase 3)
-  implied_cheap:
-    description: Implied move materially below trailing realized
-    condition: ratio_implied_to_realized < 0.80
-    weight: 3
-    direction_signal: setup is two-way; direction comes from skew
+  # ---- Vol compression family ----
+  vol_compression_3q:
+    description: Median of last 3 move_ratios below 0.7 (calm streak)
+    condition: trailing_3q_median_ratio is not None and trailing_3q_median_ratio < 0.7
+    weight: 2.0
+    direction: two_way
 
-  implied_expensive:
-    description: Implied move materially above trailing realized
-    condition: ratio_implied_to_realized > 1.30
-    weight: 2
-    direction_signal: short premium setup
+  vol_compression_severe:
+    description: Last 3 ratios ALL below 0.5 (very calm)
+    condition: trailing_3q_all_below_05 is True
+    weight: 2.0
+    direction: two_way
 
-  # Positioning
-  short_squeeze_setup:
-    description: High SI + high days-to-cover
-    condition: si_pct_float > 0.15 AND days_to_cover > 5
-    weight: 2
-    direction_signal: long-biased into beat
+  # ---- Vol saturation family ----
+  vol_saturation_3q:
+    description: Median of last 3 ratios above 2.0 (volatile streak)
+    condition: trailing_3q_median_ratio is not None and trailing_3q_median_ratio > 2.0
+    weight: 1.5
+    direction: two_way
 
-  insider_cluster_buying:
-    description: Multiple insiders buying in last 90d
-    condition: insider_net_value_90d > 0 AND insider_distinct_buyers >= 3
-    weight: 2
-    direction_signal: long-biased
+  vol_saturation_extreme:
+    description: Last print had ratio > 4.0 (singular outlier event)
+    condition: last_ratio is not None and last_ratio > 4.0
+    weight: 1.0
+    direction: two_way
 
-  # Skew
-  skew_extreme_put_bid:
-    description: 25Δ put skew z > 2 vs 90d baseline
-    condition: put_skew_zscore > 2
-    weight: 1
-    direction_signal: market hedged for downside
+  # ---- Baseline / sanity ----
+  has_history:
+    description: Has at least 4 prior events to compute a meaningful baseline
+    condition: n_prior_events >= 4
+    weight: 0.5
+    direction: two_way
 
-  skew_extreme_call_bid:
-    description: 25Δ call skew z > 2 vs 90d baseline
-    condition: call_skew_zscore > 2
-    weight: 1
-    direction_signal: market positioned for upside
+  has_deep_history:
+    description: 8+ prior events (full window)
+    condition: n_prior_events >= 8
+    weight: 0.5
+    direction: two_way
 
-# Other catalyst types — Phase 2
-material_8k:
-  # Placeholder
-  guidance_revision_recent: { weight: 2 }
+  # ---- Sector base rates (placeholder for V0; refined in Phase 2) ----
+  high_vol_baseline:
+    description: Trailing baseline >5% (this name moves a lot)
+    condition: trailing_median is not None and trailing_median > 0.05
+    weight: 1.0
+    direction: two_way
 
-fda:
-  # Placeholder
-  pdufa_with_phase3_strength: { weight: 3 }
+  # Score is capped at 10 by the scorer regardless of weights summed.
 
-guidance:
-  # Placeholder
-  consecutive_cuts: { weight: 2 }
+# Other catalyst types stub for now; populated in Phase 2.
+material_8k: {}
+fda: {}
+guidance: {}
