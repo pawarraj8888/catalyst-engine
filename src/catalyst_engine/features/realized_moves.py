@@ -381,14 +381,12 @@ def compute_universe_moves(
     Returns rows written.
     """
     where_clause = "WHERE eps_actual IS NOT NULL" if only_with_actuals else ""
-    rows = conn.execute(
-        f"""
+    rows = conn.execute(f"""
         SELECT DISTINCT ticker, event_date
         FROM earnings_events
         {where_clause}
         ORDER BY ticker, event_date
-        """
-    ).fetchall()
+        """).fetchall()
 
     log.info("realized_moves_compute_start", n_events=len(rows))
     as_of = datetime.now(UTC)

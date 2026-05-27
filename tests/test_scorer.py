@@ -28,8 +28,7 @@ def test_load_real_scoring_yaml() -> None:
 
 def test_load_custom_yaml(tmp_path: Path) -> None:
     yaml_path = tmp_path / "scoring.yaml"
-    yaml_path.write_text(
-        """
+    yaml_path.write_text("""
 version: 2
 high_conviction_threshold: 5.5
 earnings:
@@ -37,8 +36,7 @@ earnings:
     description: Always True
     condition: True
     weight: 1.0
-"""
-    )
+""")
     cfg = load_scoring_config(yaml_path)
     assert cfg.version == 2
     assert cfg.high_conviction_threshold == 5.5

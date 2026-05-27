@@ -67,8 +67,7 @@ def extract_earnings_announcements(
     Returns one record per filing. A ticker may appear multiple times if
     multiple 8-K item 2.02s were filed (e.g., earnings + pre-announcement).
     """
-    rows = conn.execute(
-        """
+    rows = conn.execute("""
         SELECT ticker, cik, accession_number, filed_at, items
         FROM filings
         WHERE filing_type = '8-K'
@@ -76,8 +75,7 @@ def extract_earnings_announcements(
           AND items IS NOT NULL
           AND list_contains(items, '2.02')
         ORDER BY ticker, filed_at
-        """
-    ).fetchall()
+        """).fetchall()
 
     out: list[EdgarAnnouncement] = []
     for ticker, cik, acc, filed_at, _items in rows:

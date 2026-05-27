@@ -320,12 +320,10 @@ def test_rewrite_event_dates_live(warehouse: duckdb.DuckDBPyConnection) -> None:
     assert n_ins == 1
 
     # New row exists with source='edgar' and date = announcement date
-    row = warehouse.execute(
-        """
+    row = warehouse.execute("""
         SELECT event_date, source FROM earnings_events
         WHERE ticker = 'AAPL' AND source = 'edgar'
-        """
-    ).fetchone()
+        """).fetchone()
     assert row is not None
     assert row[0] == date(2025, 8, 1)
 
