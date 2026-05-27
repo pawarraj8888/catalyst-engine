@@ -21,30 +21,34 @@ last_updated: 2026-05-27
 high_conviction_threshold: 6.0
 
 earnings:
+  # ============================================================
+  # Realized-moves family (V0 — pure history)
+  # ============================================================
+
   # ---- Vol compression family ----
   vol_compression_3q:
     description: Median of last 3 move_ratios below 0.7 (calm streak)
     condition: trailing_3q_median_ratio is not None and trailing_3q_median_ratio < 0.7
-    weight: 2.0
+    weight: 1.5
     direction: two_way
 
   vol_compression_severe:
     description: Last 3 ratios ALL below 0.5 (very calm)
     condition: trailing_3q_all_below_05 is True
-    weight: 2.0
+    weight: 1.5
     direction: two_way
 
   # ---- Vol saturation family ----
   vol_saturation_3q:
     description: Median of last 3 ratios above 2.0 (volatile streak)
     condition: trailing_3q_median_ratio is not None and trailing_3q_median_ratio > 2.0
-    weight: 1.5
+    weight: 1.0
     direction: two_way
 
   vol_saturation_extreme:
     description: Last print had ratio > 4.0 (singular outlier event)
     condition: last_ratio is not None and last_ratio > 4.0
-    weight: 1.0
+    weight: 0.5
     direction: two_way
 
   # ---- Baseline / sanity ----
@@ -60,11 +64,68 @@ earnings:
     weight: 0.5
     direction: two_way
 
-  # ---- Sector base rates (placeholder for V0; refined in Phase 2) ----
   high_vol_baseline:
     description: Trailing baseline >5% (this name moves a lot)
     condition: trailing_median is not None and trailing_median > 0.05
     weight: 1.0
+    direction: two_way
+
+  # ============================================================
+  # Positioning family (Phase 2)
+  # ============================================================
+
+  si_crowded_short:
+    description: Short interest >1.5 std above 1y baseline (squeeze risk on beat)
+    condition: si_zscore_1y is not None and si_zscore_1y > 1.5
+    weight: 2.0
+    direction: up
+
+  si_extreme_crowded:
+    description: SI >2.5 std above baseline (severely crowded)
+    condition: si_zscore_1y is not None and si_zscore_1y > 2.5
+    weight: 1.0
+    direction: up
+
+  si_covering:
+    description: SI sharply lower than baseline (z < -1.5; smart money out)
+    condition: si_zscore_1y is not None and si_zscore_1y < -1.5
+    weight: 1.5
+    direction: down
+
+  high_days_to_cover:
+    description: Days-to-cover > 5 (illiquid short — sharper squeeze potential)
+    condition: si_days_to_cover is not None and si_days_to_cover > 5.0
+    weight: 1.0
+    direction: up
+
+  insider_cluster_buying:
+    description: 3+ distinct insiders bought in trailing 60d (Cohen-Malloy-Pomorski signal)
+    condition: insider_unique_buyers_60d is not None and insider_unique_buyers_60d >= 3
+    weight: 2.0
+    direction: up
+
+  insider_cluster_selling:
+    description: 3+ distinct insiders sold in trailing 60d
+    condition: insider_unique_sellers_60d is not None and insider_unique_sellers_60d >= 3
+    weight: 1.0
+    direction: down
+
+  insider_meaningful_buy:
+    description: Net insider buying >$1M in trailing 30d (excluding 10b5-1)
+    condition: insider_net_buying_usd_30d is not None and insider_net_buying_usd_30d > 1_000_000
+    weight: 2.5
+    direction: up
+
+  insider_meaningful_sell:
+    description: Net insider selling <-$5M in trailing 30d (excluding 10b5-1)
+    condition: insider_net_buying_usd_30d is not None and insider_net_buying_usd_30d < -5_000_000
+    weight: 1.5
+    direction: down
+
+  insider_silent:
+    description: Zero open-market activity in trailing 30d (positioning unchanged)
+    condition: insider_buys_count_30d == 0 and insider_sells_count_30d == 0
+    weight: -0.5
     direction: two_way
 
   # Score is capped at 10 by the scorer regardless of weights summed.

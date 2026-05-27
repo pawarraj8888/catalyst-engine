@@ -72,6 +72,11 @@ def build_features_for_event(
     when the underlying value is None — that makes rule conditions like
     `x is not None and x < 0.7` work without KeyError.
     """
+    from datetime import timedelta as _td
+
+    from catalyst_engine.features.insider import build_insider_features
+    from catalyst_engine.features.positioning import build_positioning_features
+
     # Pull all prior realized_moves rows for this ticker, strictly before T
     prior = conn.execute(
         """
@@ -98,7 +103,7 @@ def build_features_for_event(
     # most recent prior event (i.e. what we knew going in)
     trailing_median = prior_medians[0] if prior_medians else None
 
-    return {
+    features: dict[str, Any] = {
         "ticker": ticker,
         "n_prior_events": len(prior),
         "trailing_3q_median_ratio": trailing_3q_median_ratio,
@@ -109,6 +114,13 @@ def build_features_for_event(
             sorted(prior_abs_moves)[len(prior_abs_moves) // 2] if prior_abs_moves else None
         ),
     }
+
+    # Positioning features (PIT: evaluated at end of day before event)
+    positioning_as_of = datetime.combine(event_date - _td(days=1), datetime.max.time(), tzinfo=UTC)
+    features.update(build_positioning_features(conn, ticker, positioning_as_of))
+    features.update(build_insider_features(conn, ticker, positioning_as_of))
+
+    return features
 
 
 # ---------------------------------------------------------------------------

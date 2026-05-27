@@ -315,8 +315,65 @@ def ingest_earnings_backfill() -> None:
 @ingest_app.command("options-snapshot")
 def ingest_options_snapshot() -> None:
     """[Phase 1 next] Snapshot options chains via Tradier."""
-    console.print("[yellow]Not yet implemented — Phase 1 next step.[/yellow]")
+    console.print("[yellow]Not yet implemented - Phase 1 next step.[/yellow]")
     raise typer.Exit(2)
+
+
+@ingest_app.command("short-interest")
+def ingest_short_interest() -> None:
+    """Fetch FINRA short interest snapshots for the entire universe."""
+    from catalyst_engine.data.short_interest import ingest_universe
+    from catalyst_engine.data.universe import load_universe
+
+    universe = load_universe()
+    tickers = universe.tickers
+
+    conn = connect()
+    try:
+        console.print(f"Fetching short interest for {len(tickers)} tickers...")
+        n = ingest_universe(conn, tickers)
+        console.print(f"[green]{n} new short_interest rows written[/green]")
+    finally:
+        conn.close()
+
+
+@ingest_app.command("insider-bulk")
+def ingest_insider_bulk(
+    start: str = typer.Option("2021Q1", help="First quarter, e.g. 2021Q1"),
+    end: str = typer.Option("2026Q1", help="Last quarter (inclusive)"),
+) -> None:
+    """Download SEC bulk insider-transaction ZIPs and ingest into insider_transactions.
+
+    SEC publishes quarterly ZIPs containing every Form 3/4/5 filing's
+    structured transactions. This is the gold-standard insider data source.
+    """
+    import re
+
+    from catalyst_engine.data.insider_bulk import ingest_quarters
+    from catalyst_engine.data.universe import load_universe
+
+    def _parse(qstr: str) -> tuple[int, int]:
+        m = re.fullmatch(r"(\d{4})Q([1-4])", qstr.upper().strip())
+        if not m:
+            raise typer.BadParameter(f"Expected format YYYYQN, got {qstr!r}")
+        return int(m.group(1)), int(m.group(2))
+
+    sy, sq = _parse(start)
+    ey, eq = _parse(end)
+    universe = load_universe()
+    tickers = universe.tickers
+
+    conn = connect()
+    try:
+        console.print(f"Ingesting insider bulk: {start} -> {end}, {len(tickers)} universe tickers")
+        stats = ingest_quarters(conn, tickers, start_year=sy, start_q=sq, end_year=ey, end_q=eq)
+        total = sum(v for v in stats.values() if v > 0)
+        failed = [k for k, v in stats.items() if v < 0]
+        console.print(f"[green]Inserted {total} insider transactions[/green]")
+        if failed:
+            console.print(f"[yellow]Quarters with errors: {failed}[/yellow]")
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
