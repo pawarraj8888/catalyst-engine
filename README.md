@@ -2,6 +2,8 @@
 
 > A single-name catalyst tracker that logs its own calls publicly. The track record builds over time, in the open.
 
+**[ View the live dashboard -> ](https://pawarraj8888.github.io/catalyst-engine/)**
+
 Most "trading model" repos show you a backtest. This one shows you what it actually called and what happened. Every weekday morning a GitHub Action scans the next 14 days of earnings events across ~250 large-caps, scores each one, and appends rows to [`live_log/calls.csv`](./live_log/calls.csv). Every evening it resolves yesterday's calls and writes post-mortems for the misses.
 
 The backtest sits ~50% on free large-cap data. That's a feature, not a bug -- it's the efficient-markets baseline. **The value of the artifact is the public, time-stamped track record that accumulates from here.** Show it to a PM in three months and they can see whether the calls played out, whether the post-mortems are honest, whether the discipline holds.
