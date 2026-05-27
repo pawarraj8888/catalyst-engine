@@ -1,0 +1,282 @@
+# Catalyst Engine universe — V1
+#
+# Tickers are seed values. CIKs are resolved at first ingestion via SEC's
+# company_tickers.json and cached in `universe` table.
+#
+# Sources for selection:
+# - Russell 1000 constituents (current)
+# - Sector classification per GICS top-level mapping
+#
+# Edit freely. Adding/removing tickers requires `catalyst universe sync`.
+
+version: 1
+last_updated: 2026-05-27
+
+healthcare:
+  # Large-cap pharma / biotech / med devices
+  - JNJ
+  - LLY
+  - UNH
+  - PFE
+  - ABBV
+  - MRK
+  - TMO
+  - ABT
+  - DHR
+  - AMGN
+  - BMY
+  - GILD
+  - CVS
+  - MDT
+  - ISRG
+  - VRTX
+  - REGN
+  - BSX
+  - SYK
+  - ELV
+  - HUM
+  - CI
+  - ZTS
+  - BDX
+  - BIIB
+  # Mid-cap biotech with active catalysts
+  - MRNA
+  - BNTX
+  - ALNY
+  - INCY
+  - HALO
+  - JAZZ
+  - NBIX
+  - EXEL
+  - SRPT
+  - BMRN
+  - IONS
+  - ARWR
+  - BLUE
+  - CRSP
+  - EDIT
+  - NTLA
+  - BEAM
+  - VKTX
+  - INSM
+  - TGTX
+  - ALKS
+  - APLS
+  - KRYS
+  - RYTM
+  - PTCT
+  # Med devices / diagnostics
+  - IDXX
+  - DXCM
+  - ALGN
+  - EW
+  - WST
+  - HOLX
+  - PODD
+  - ILMN
+  - GEHC
+  - WAT
+
+consumer:
+  # Mega-cap discretionary
+  - AMZN
+  - TSLA
+  - HD
+  - MCD
+  - NKE
+  - SBUX
+  - LOW
+  - TJX
+  - BKNG
+  - CMG
+  - ORLY
+  - AZO
+  - ROST
+  - YUM
+  - LVS
+  - MAR
+  - HLT
+  - GM
+  - F
+  # Staples
+  - WMT
+  - PG
+  - KO
+  - PEP
+  - COST
+  - MDLZ
+  - PM
+  - CL
+  - MO
+  - GIS
+  - KHC
+  - HSY
+  - K
+  - STZ
+  - MNST
+  - KMB
+  - ADM
+  - TGT
+  - DG
+  - DLTR
+  - KR
+  # Mid-cap consumer narratives
+  - LULU
+  - DECK
+  - CROX
+  - BIRK
+  - ANF
+  - URBN
+  - W
+  - RH
+  - WSM
+  - ETSY
+  - DKNG
+  - CAVA
+  - PTON
+  - PLNT
+  - PLBY
+  - WING
+  - SHAK
+  - BROS
+  - DASH
+  - UBER
+  - LYFT
+
+tech:
+  # Mega-cap
+  - AAPL
+  - MSFT
+  - GOOGL
+  - META
+  - NVDA
+  - AVGO
+  - ORCL
+  - CRM
+  - ADBE
+  - CSCO
+  - ACN
+  - IBM
+  - INTC
+  - AMD
+  - QCOM
+  - TXN
+  - INTU
+  - NOW
+  - AMAT
+  - LRCX
+  - KLAC
+  - MU
+  - ADI
+  - PANW
+  - SNPS
+  - CDNS
+  # Mid-cap software / fintech / cloud
+  - SNOW
+  - DDOG
+  - NET
+  - MDB
+  - CRWD
+  - ZS
+  - OKTA
+  - TEAM
+  - WDAY
+  - HUBS
+  - DOCN
+  - FROG
+  - GTLB
+  - S
+  - ESTC
+  - SMAR
+  - CFLT
+  - PATH
+  - U
+  - RBLX
+  - SHOP
+  - SQ
+  - PYPL
+  - COIN
+  - HOOD
+  - SOFI
+  - AFRM
+  - UPST
+  - LMND
+  - TWLO
+  - ZM
+  - DBX
+  - BOX
+  # Semis & hardware
+  - ON
+  - MCHP
+  - MRVL
+  - SWKS
+  - ENPH
+  - SEDG
+  - PLTR
+  - SMCI
+  - ANET
+  - DELL
+  - HPE
+  - NTAP
+  - PSTG
+  - WDC
+  - STX
+  - JNPR
+  - FTNT
+  - CHKP
+  - CYBR
+  - TENB
+
+industrials:
+  # Mega-cap industrials
+  - CAT
+  - GE
+  - HON
+  - UNP
+  - RTX
+  - BA
+  - LMT
+  - DE
+  - UPS
+  - FDX
+  - NSC
+  - CSX
+  - WM
+  - EMR
+  - ETN
+  - PH
+  - ITW
+  - GD
+  - NOC
+  - MMM
+  - TT
+  - JCI
+  - ROK
+  - FAST
+  - PCAR
+  # Mid-cap industrials & transports
+  - GWW
+  - URI
+  - HUBB
+  - DOV
+  - XYL
+  - PWR
+  - VMC
+  - MLM
+  - RSG
+  - WCN
+  - ODFL
+  - JBHT
+  - CHRW
+  - EXPD
+  - SAIA
+  - XPO
+  - GXO
+  - KNX
+  - WAB
+  - SNA
+  - PNR
+  - AOS
+  - GNRC
+  - WSC
+  - HRI

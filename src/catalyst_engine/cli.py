@@ -1,0 +1,195 @@
+"""Command-line interface.
+
+Single entry point exposed as `catalyst` (see [project.scripts] in pyproject).
+
+Subcommands
+-----------
+catalyst universe sync         Resolve CIKs and persist to warehouse
+catalyst ingest edgar          Pull recent SEC filings for the universe
+catalyst ingest earnings       Refresh earnings calendar (Phase 1 next)
+catalyst ingest prices         Refresh OHLCV (Phase 1 next)
+catalyst ingest options-snapshot  Take options chain snapshot (Phase 1 next)
+catalyst backtest replay       Run historical replay (Phase 3)
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from catalyst_engine.config import get_settings
+from catalyst_engine.data.edgar import ingest_universe_filings
+from catalyst_engine.data.universe import (
+    fetch_sec_ticker_map,
+    load_universe,
+    resolve_ciks,
+)
+from catalyst_engine.db import connect
+from catalyst_engine.utils.logging import configure_logging, get_logger
+
+app = typer.Typer(no_args_is_help=True, add_completion=False)
+universe_app = typer.Typer(no_args_is_help=True, help="Universe management.")
+ingest_app = typer.Typer(no_args_is_help=True, help="Data ingestion pipelines.")
+backtest_app = typer.Typer(no_args_is_help=True, help="Backtest commands.")
+app.add_typer(universe_app, name="universe")
+app.add_typer(ingest_app, name="ingest")
+app.add_typer(backtest_app, name="backtest")
+
+console = Console()
+log = get_logger(__name__)
+
+
+@app.callback()
+def _root() -> None:
+    """Catalyst Engine — single-name catalyst tracking."""
+    configure_logging()
+
+
+# ---------------------------------------------------------------------------
+# universe
+# ---------------------------------------------------------------------------
+
+
+@universe_app.command("sync")
+def universe_sync() -> None:
+    """Load universe.yaml, resolve CIKs via SEC, persist to warehouse."""
+    universe = load_universe()
+    ticker_map = fetch_sec_ticker_map()
+    resolved = resolve_ciks(universe, ticker_map=ticker_map)
+
+    today = datetime.now(timezone.utc)
+    conn = connect()
+    try:
+        # Wipe and reload — universe is small, simplest semantics
+        conn.execute("DELETE FROM universe")
+        for entry in resolved.entries:
+            if entry.cik is None:
+                continue
+            conn.execute(
+                """
+                INSERT INTO universe
+                (ticker, cik, company_name, sector, start_date, as_of, source)
+                VALUES (?, ?, ?, ?, ?, ?, 'config')
+                """,
+                [entry.ticker, entry.cik, entry.company_name, entry.sector, today.date(), today],
+            )
+        n = conn.execute("SELECT COUNT(*) FROM universe").fetchone()
+    finally:
+        conn.close()
+
+    console.print(f"[green]Universe synced: {n[0] if n else 0} entries with CIK[/green]")
+
+
+@universe_app.command("show")
+def universe_show() -> None:
+    """Print the current universe by sector."""
+    conn = connect(read_only=True)
+    try:
+        rows = conn.execute(
+            "SELECT sector, COUNT(*) FROM universe GROUP BY sector ORDER BY sector"
+        ).fetchall()
+    finally:
+        conn.close()
+
+    table = Table(title="Universe")
+    table.add_column("Sector")
+    table.add_column("Count", justify="right")
+    for sector, n in rows:
+        table.add_row(sector, str(n))
+    console.print(table)
+
+
+# ---------------------------------------------------------------------------
+# ingest
+# ---------------------------------------------------------------------------
+
+
+@ingest_app.command("edgar")
+def ingest_edgar(
+    days: int = typer.Option(90, help="Lookback window in days"),
+    forms: str = typer.Option(
+        "8-K,10-Q,10-K,4,13F-HR",
+        help="Comma-separated filing forms to ingest",
+    ),
+) -> None:
+    """Pull recent SEC filings for the universe."""
+    settings = get_settings()
+    if "@" not in settings.sec_user_agent:
+        console.print(
+            "[red]SEC_USER_AGENT must include an email. Set it in .env first.[/red]"
+        )
+        raise typer.Exit(1)
+
+    conn = connect()
+    try:
+        entries = conn.execute(
+            "SELECT ticker, cik FROM universe WHERE cik IS NOT NULL"
+        ).fetchall()
+        if not entries:
+            console.print(
+                "[yellow]No universe rows with CIK. Run `catalyst universe sync` first.[/yellow]"
+            )
+            raise typer.Exit(1)
+
+        since = datetime.now(timezone.utc) - timedelta(days=days)
+        filing_types = tuple(f.strip() for f in forms.split(","))
+
+        console.print(
+            f"Ingesting filings for {len(entries)} tickers, lookback={days}d, forms={filing_types}"
+        )
+        results = ingest_universe_filings(
+            conn,
+            universe_entries=[(t, c) for t, c in entries],
+            filing_types=filing_types,
+            since=since,
+        )
+    finally:
+        conn.close()
+
+    successes = sum(1 for v in results.values() if v >= 0)
+    total_rows = sum(v for v in results.values() if v > 0)
+    failures = sum(1 for v in results.values() if v < 0)
+    console.print(
+        f"[green]Done. Tickers: {successes} success, {failures} failed. "
+        f"Total new rows: {total_rows}[/green]"
+    )
+
+
+@ingest_app.command("earnings")
+def ingest_earnings() -> None:
+    """[Phase 1 next] Refresh earnings calendar via Finnhub."""
+    console.print("[yellow]Not yet implemented — Phase 1 next step.[/yellow]")
+    raise typer.Exit(2)
+
+
+@ingest_app.command("prices")
+def ingest_prices() -> None:
+    """[Phase 1 next] Refresh daily OHLCV via yfinance."""
+    console.print("[yellow]Not yet implemented — Phase 1 next step.[/yellow]")
+    raise typer.Exit(2)
+
+
+@ingest_app.command("options-snapshot")
+def ingest_options_snapshot() -> None:
+    """[Phase 1 next] Snapshot options chains via Tradier."""
+    console.print("[yellow]Not yet implemented — Phase 1 next step.[/yellow]")
+    raise typer.Exit(2)
+
+
+# ---------------------------------------------------------------------------
+# backtest
+# ---------------------------------------------------------------------------
+
+
+@backtest_app.command("replay")
+def backtest_replay() -> None:
+    """[Phase 3] Historical replay of catalyst scoring."""
+    console.print("[yellow]Not yet implemented — Phase 3.[/yellow]")
+    raise typer.Exit(2)
+
+
+if __name__ == "__main__":
+    app()

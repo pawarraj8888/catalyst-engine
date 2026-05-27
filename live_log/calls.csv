@@ -1,0 +1,5 @@
+timestamp,ticker,catalyst_type,event_date,score,thesis,trade_structure,kill_criteria,outcome,realized_move,implied_move,notes
+# Every call gets one row. Append-only. Never edit historical rows.
+# `outcome` is filled after the event: WIN | LOSS | NEUTRAL | INVALIDATED
+# `realized_move` is the 1-day move (negative for downside)
+# Post-mortems live in postmortems/<YYYY-MM-DD>-<ticker>.md
