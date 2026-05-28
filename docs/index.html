@@ -3,25 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catalyst Engine</title>
+<title>MoveScanner</title>
 <style>
   /* ==================================================================
      DESIGN SYSTEM — Apple light, liquid glass over a living mesh
      ================================================================== */
   :root {
-    /* Apple system fonts */
     --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
     --font-serif: ui-serif, "New York", "Times New Roman", Georgia, serif;
     --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 
-    /* Ink palette — true Apple light */
     --ink: rgba(0, 0, 0, 0.92);
     --ink-2: rgba(0, 0, 0, 0.62);
     --ink-3: rgba(0, 0, 0, 0.42);
     --ink-4: rgba(0, 0, 0, 0.20);
     --hairline: rgba(0, 0, 0, 0.07);
 
-    /* Semantic */
     --green: #18a558;
     --green-bg: rgba(24, 165, 88, 0.10);
     --orange: #d97757;
@@ -29,11 +26,8 @@
     --blue: #0a84ff;
     --blue-bg: rgba(10, 132, 255, 0.08);
 
-    /* Glass — the liquid glass primitive */
     --glass-tint: rgba(255, 255, 255, 0.55);
     --glass-blur: saturate(180%) blur(30px);
-    --glass-border-top: rgba(255, 255, 255, 0.85);
-    --glass-border-bottom: rgba(255, 255, 255, 0.20);
     --glass-shadow:
       0 0 0 0.5px rgba(0,0,0,0.06),
       0 1px 1px rgba(0,0,0,0.02),
@@ -57,15 +51,11 @@
 
   body {
     min-height: 100vh;
-    background: #f5f4f0; /* base — the rest is painted by ::before */
+    background: #f5f4f0;
     position: relative;
     overflow-x: hidden;
   }
 
-  /* ==================================================================
-     THE MEDIUM — a living color mesh that the glass refracts.
-     Two layers: stable big blobs + a slow drift on a second layer.
-     ================================================================== */
   body::before {
     content: '';
     position: fixed;
@@ -87,7 +77,6 @@
     100% { transform: translate3d(-1%, 2%, 0) scale(1.02); }
   }
 
-  /* faint grain to break up the gradients */
   body::after {
     content: '';
     position: fixed; inset: 0; z-index: -1;
@@ -95,19 +84,12 @@
     pointer-events: none;
   }
 
-  /* ==================================================================
-     LAYOUT
-     ================================================================== */
   .wrap {
     max-width: 1080px;
     margin: 0 auto;
     padding: 56px 24px 80px;
   }
 
-  /* ==================================================================
-     GLASS PRIMITIVE
-     Every panel uses .glass. Edge highlights mimic the iOS Tahoe look.
-     ================================================================== */
   .glass {
     position: relative;
     background: var(--glass-tint);
@@ -117,34 +99,30 @@
     box-shadow: var(--glass-shadow);
     overflow: hidden;
   }
-  /* top edge highlight */
   .glass::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(180deg, var(--glass-border-top) 0%, transparent 12%, transparent 88%, var(--glass-border-bottom) 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, transparent 12%, transparent 88%, rgba(255,255,255,0.20) 100%);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
             mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor; mask-composite: exclude;
     pointer-events: none;
   }
 
-  /* ==================================================================
-     HEADER
-     ================================================================== */
   header.top {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-bottom: 32px;
+    margin-bottom: 28px;
     padding: 0 4px;
   }
   .brand {
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 600;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.022em;
     color: var(--ink);
   }
   .brand .sub {
@@ -170,7 +148,6 @@
     border-radius: 100px;
     font-weight: 500;
     font-size: 11px;
-    letter-spacing: 0;
   }
   .topright .live::before {
     content: '';
@@ -190,9 +167,6 @@
     font-size: 11px;
   }
 
-  /* ==================================================================
-     EXPLAINER (intro paragraph below masthead)
-     ================================================================== */
   .explainer {
     margin-bottom: 32px;
     padding: 0 6px;
@@ -200,19 +174,18 @@
   .explainer p {
     margin: 0;
     font-size: 15px;
-    line-height: 1.55;
+    line-height: 1.6;
     color: var(--ink-2);
-    max-width: 780px;
+    max-width: 760px;
     letter-spacing: -0.005em;
   }
+  .explainer p + p { margin-top: 12px; }
   .explainer p strong {
     color: var(--ink);
     font-weight: 600;
   }
 
-  /* ==================================================================
-     HERO — the top conviction
-     ================================================================== */
+  /* HERO */
   .hero {
     padding: 36px 40px;
     margin-bottom: 18px;
@@ -225,7 +198,7 @@
   .hero .eyebrow {
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.10em;
     color: var(--ink-3);
     font-weight: 600;
     margin-bottom: 14px;
@@ -269,7 +242,7 @@
   }
   .hero .score-block {
     text-align: center;
-    min-width: 130px;
+    min-width: 150px;
     padding: 22px;
     background: rgba(255, 255, 255, 0.45);
     border-radius: 18px;
@@ -285,13 +258,12 @@
   }
   .hero .score-block .scorelabel {
     font-size: 10px;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.10em;
     text-transform: uppercase;
     color: var(--ink-3);
-    margin-top: 6px;
+    margin-top: 8px;
     font-weight: 500;
   }
-
   .hero.empty .h1placeholder {
     font-family: var(--font-serif);
     font-size: 22px;
@@ -300,13 +272,10 @@
     font-style: italic;
   }
 
-  /* ==================================================================
-     KPI STRIP — minimal, no glass card, just numbers
-     ================================================================== */
+  /* KPI STRIP */
   .kpi-strip {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 0;
     padding: 22px 40px;
     margin-bottom: 32px;
   }
@@ -338,18 +307,15 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* ==================================================================
-     SECTIONS
-     ================================================================== */
-  section {
-    margin-top: 40px;
-  }
+  /* SECTIONS */
+  section { margin-top: 40px; }
   section .head {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
     margin-bottom: 18px;
     padding: 0 8px;
+    gap: 24px;
   }
   section .head h2 {
     margin: 0;
@@ -363,9 +329,7 @@
     color: var(--ink-3);
   }
 
-  /* ==================================================================
-     DAY GROUPS — calls-by-day, the morning briefing layout
-     ================================================================== */
+  /* DAY GROUPS */
   .day-card {
     padding: 0;
     margin-bottom: 14px;
@@ -417,9 +381,7 @@
     font-size: 12px;
     color: var(--ink-3);
     margin-top: 3px;
-    letter-spacing: -0.005em;
   }
-
   .thesis-cell {
     font-size: 14px;
     color: var(--ink-2);
@@ -433,10 +395,8 @@
     color: var(--ink-3);
     font-size: 12px;
     margin-top: 5px;
-    letter-spacing: -0.005em;
   }
 
-  /* score cell - clearer label */
   .score-cell {
     text-align: right;
   }
@@ -455,13 +415,9 @@
     font-size: 11px;
     color: var(--ink-3);
     margin-top: 4px;
-    text-transform: lowercase;
-    letter-spacing: 0;
   }
 
-  /* ==================================================================
-     TRACK RECORD TABLE — sparse, sortable
-     ================================================================== */
+  /* TRACK RECORD TABLE */
   .record {
     padding: 8px 0;
   }
@@ -509,9 +465,7 @@
     background: currentColor;
   }
 
-  /* ==================================================================
-     PERFORMANCE — minimal chart
-     ================================================================== */
+  /* PERFORMANCE */
   .perf {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -575,9 +529,7 @@
     font-size: 11px;
   }
 
-  /* ==================================================================
-     EMPTY STATE
-     ================================================================== */
+  /* EMPTY STATE */
   .empty {
     padding: 36px 32px;
     text-align: center;
@@ -586,9 +538,24 @@
   .empty .label { font-weight: 500; color: var(--ink-2); font-size: 14px; margin-bottom: 4px; }
   .empty .desc { font-size: 13px; max-width: 460px; margin: 0 auto; line-height: 1.5; }
 
-  /* ==================================================================
-     FOOTER
-     ================================================================== */
+  /* SCOPE NOTE */
+  .scope-note {
+    margin-top: 40px;
+    padding: 28px 32px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .scope-note h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .scope-note p { margin: 0; max-width: 720px; }
+  .scope-note p + p { margin-top: 10px; }
+
+  /* FOOTER */
   footer.foot {
     margin-top: 56px;
     padding: 22px 24px 0 24px;
@@ -608,9 +575,7 @@
   }
   footer.foot a:hover { text-decoration: underline; }
 
-  /* ==================================================================
-     REVEAL
-     ================================================================== */
+  /* REVEAL */
   .reveal {
     opacity: 0;
     transform: translateY(10px);
@@ -622,11 +587,10 @@
   .reveal:nth-of-type(4) { animation-delay: 0.26s; }
   .reveal:nth-of-type(5) { animation-delay: 0.33s; }
   .reveal:nth-of-type(6) { animation-delay: 0.40s; }
+  .reveal:nth-of-type(7) { animation-delay: 0.47s; }
   @keyframes reveal { to { opacity: 1; transform: none; } }
 
-  /* ==================================================================
-     RESPONSIVE
-     ================================================================== */
+  /* RESPONSIVE */
   @media (max-width: 760px) {
     .wrap { padding: 32px 16px 64px; }
     .hero { grid-template-columns: 1fr; gap: 22px; padding: 28px 24px; }
@@ -647,11 +611,11 @@
 
 <div class="wrap">
 
-  <!-- ======================== TOP ======================== -->
+  <!-- TOP -->
   <header class="top reveal">
     <div class="brand">
-      Catalyst Engine
-      <span class="sub">A research workflow that scores upcoming US earnings prints and logs every call publicly</span>
+      MoveScanner
+      <span class="sub">Spot which earnings reports are likely to cause big stock moves</span>
     </div>
     <div class="topright">
       <span class="live">Live</span>
@@ -659,86 +623,83 @@
     </div>
   </header>
 
-  <!-- ======================== EXPLAINER ======================== -->
+  <!-- EXPLAINER (plain language) -->
   <div class="explainer reveal">
     <p>
-      <strong>Catalyst Engine</strong> watches 241 US large-cap stocks. Each morning it scores the next two weeks of earnings prints from <strong>0 (no signal)</strong> to <strong>10 (very high conviction)</strong>, then logs every call publicly with a timestamp. After each company reports, the engine checks whether the actual 1-day move was bigger than that stock's usual move — a verifiable hit-or-miss record that builds in the open over time.
+      When a company reports earnings, its stock can jump or drop. Most prints are quiet. A few cause big moves. <strong>MoveScanner watches 241 large US companies and tries to guess, in advance, which ones are about to have a big move</strong> — in either direction.
+    </p>
+    <p>
+      Every weekday, the system scores each upcoming earnings report from <strong>0 (nothing unusual)</strong> to <strong>10 (looks like a big move is coming)</strong>. After each company reports, we check what actually happened and mark the call a hit or a miss. The full log is public — every prediction is time-stamped before the event, every outcome is recorded after.
     </p>
   </div>
 
-  <!-- ======================== HERO ======================== -->
-  <div class="glass hero reveal" id="hero">
-    <!-- Populated by JS -->
-  </div>
+  <!-- HERO -->
+  <div class="glass hero reveal" id="hero"></div>
 
-  <!-- ======================== KPI STRIP ======================== -->
+  <!-- KPI STRIP -->
   <div class="glass kpi-strip reveal">
     <div>
       <div class="k-label">Stocks watched</div>
       <div class="k-value">241</div>
-      <div class="k-sub">large-cap US equities</div>
+      <div class="k-sub">large US companies</div>
     </div>
     <div>
-      <div class="k-label">Calls in queue</div>
+      <div class="k-label">Upcoming calls</div>
       <div class="k-value" id="kpi-pending">—</div>
-      <div class="k-sub" id="kpi-pending-sub">awaiting their print</div>
+      <div class="k-sub" id="kpi-pending-sub">next 14 days</div>
     </div>
     <div>
-      <div class="k-label">Calls resolved</div>
+      <div class="k-label">Predictions scored</div>
       <div class="k-value" id="kpi-record">—</div>
-      <div class="k-sub" id="kpi-record-sub">verified outcomes</div>
+      <div class="k-sub" id="kpi-record-sub">hits vs total</div>
     </div>
     <div>
-      <div class="k-label">Track record maturity</div>
+      <div class="k-label">Track record progress</div>
       <div class="k-value" id="kpi-confidence">—</div>
-      <div class="k-sub" id="kpi-confidence-sub">until weights are trusted</div>
+      <div class="k-sub" id="kpi-confidence-sub">until 30 results in</div>
     </div>
   </div>
 
-  <!-- ======================== UPCOMING ======================== -->
+  <!-- UPCOMING -->
   <section class="reveal">
     <div class="head">
       <div>
         <h2>Upcoming earnings, next 14 days</h2>
-        <div class="sub" style="margin-top:4px;max-width:640px;">The engine watches 241 large-cap US stocks and scores each upcoming earnings event from 0 (no signal) to 10 (very high conviction). Below are every name reporting in the next two weeks, grouped by day.</div>
+        <div class="sub" style="margin-top:4px;max-width:680px;">Every company reporting in the next two weeks, ranked by how likely the system thinks a big move is. Higher numbers mean stronger signals.</div>
       </div>
       <span class="sub" id="upcoming-meta">—</span>
     </div>
-    <div id="upcoming-container">
-      <!-- day-grouped cards rendered here -->
-    </div>
+    <div id="upcoming-container"></div>
   </section>
 
-  <!-- ======================== TRACK RECORD ======================== -->
+  <!-- TRACK RECORD -->
   <section class="reveal">
     <div class="head">
       <div>
-        <h2>Resolved track record</h2>
-        <div class="sub" style="margin-top:4px;max-width:640px;" id="record-meta">After each company reports, the engine checks whether the actual 1-day move exceeded its typical move. A "hit" means the conviction call was correct.</div>
+        <h2>Past predictions</h2>
+        <div class="sub" style="margin-top:4px;max-width:680px;">Every company that has already reported, with the score we gave it beforehand and what actually happened. A <strong>hit</strong> means the move was bigger than that stock's usual reaction. A <strong>miss</strong> means it was smaller.</div>
       </div>
     </div>
-    <div class="glass record" id="record-container">
-      <!-- table rendered here -->
-    </div>
+    <div class="glass record" id="record-container"></div>
   </section>
 
-  <!-- ======================== PERFORMANCE ======================== -->
+  <!-- PERFORMANCE -->
   <section class="reveal">
     <div class="head">
       <div>
-        <h2>How the engine has scored</h2>
-        <div class="sub" style="margin-top:4px;max-width:640px;">Hit rates by conviction band. Live performance fills in as calls resolve. The historical backtest on five years of data is shown alongside for context.</div>
+        <h2>How accurate are the predictions?</h2>
+        <div class="sub" style="margin-top:4px;max-width:680px;">Hit rate by score bucket. Higher scores should produce more hits if the system has skill. The five-year backtest on the right shows what the same scoring rules would have done historically.</div>
       </div>
     </div>
     <div class="perf">
       <div class="glass card">
-        <h3>Live calls so far</h3>
-        <p class="card-sub">Real-time outcomes only. Below 30 resolved calls the weights are treated as untrusted.</p>
+        <h3>Live results so far</h3>
+        <p class="card-sub">Predictions made by the running system. Need 30+ results before any percentage is meaningful.</p>
         <div id="live-buckets"></div>
       </div>
       <div class="glass card">
         <h3>Five-year backtest</h3>
-        <p class="card-sub">2,881 earnings events scored against trailing 8-quarter baseline.</p>
+        <p class="card-sub">Same rules applied to 2,881 historical earnings prints.</p>
         <div>
           <div class="barrow"><div class="lab">0 – 2</div><div class="track"><div class="fill" style="width:48.9%"></div></div><div class="val">48.9%<span class="n">N = 1,760</span></div></div>
           <div class="barrow"><div class="lab">2 – 4</div><div class="track"><div class="fill" style="width:52.2%"></div></div><div class="val">52.2%<span class="n">N = 596</span></div></div>
@@ -748,9 +709,25 @@
     </div>
   </section>
 
-  <!-- ======================== FOOTER ======================== -->
+  <!-- SCOPE NOTE -->
+  <section class="reveal">
+    <div class="glass scope-note">
+      <h3>What MoveScanner does and doesn't do</h3>
+      <p>
+        <strong>What it does:</strong> Predicts whether a stock's reaction to its earnings report will be bigger or smaller than that stock's usual reaction. Think of it as a calendar prioritizer — "of the 30 companies reporting next week, here are the 5 worth paying attention to."
+      </p>
+      <p>
+        <strong>What it doesn't do:</strong> Predict which direction the stock will move. A big move can go up or down. MoveScanner only flags <em>magnitude</em>, not <em>direction</em>. Direction depends on whether the earnings beat or miss expectations, and that's a separate question that would need fundamentals data, options data, or sell-side estimates to answer.
+      </p>
+      <p>
+        <strong>Why this is honest:</strong> On free data and large US stocks, predicting direction reliably is genuinely hard — the market is efficient at pricing most of what's public. Predicting <em>magnitude</em> is easier because volatility patterns persist. MoveScanner is built around that asymmetry on purpose.
+      </p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
   <footer class="foot">
-    <span>Catalyst Engine · built by Raj Pawar</span>
+    <span>MoveScanner · built by Raj Pawar</span>
     <span>
       <a href="https://github.com/pawarraj8888/catalyst-engine">Repository</a>
       <a href="https://github.com/pawarraj8888/catalyst-engine/blob/main/live_log/calls.csv">Raw log</a>
@@ -764,7 +741,7 @@
 (function () {
   'use strict';
 
-  // ============ CSV ============
+  // --------------- CSV ---------------
   function parseCSV(text) {
     const lines = text.replace(/\r\n/g, '\n').split('\n').filter(l => l && !l.startsWith('#'));
     if (!lines.length) return [];
@@ -790,10 +767,9 @@
   }
   const pf = s => { if (s == null || s === '') return null; const n = parseFloat(s); return isNaN(n) ? null : n; };
 
-  // ============ Formatting ============
+  // --------------- Formatting ---------------
   const fmtPct  = (n, d=2) => n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(d) + '%';
   const fmtBase = (n, d=2) => n == null ? '—' : n.toFixed(d) + '%';
-  const fmtNum  = (n, d=2) => n == null ? '—' : n.toFixed(d);
 
   function relTime(iso) {
     if (!iso) return '—';
@@ -827,178 +803,167 @@
   }
 
   function convictionLabel(s) {
-    if (s == null) return 'no signal';
-    if (s < 1.0) return 'no view';
-    if (s < 2.0) return 'low';
-    if (s < 3.0) return 'moderate';
-    if (s < 4.5) return 'above average';
-    if (s < 6.0) return 'high';
-    return 'very high';
+    if (s == null) return 'no read';
+    if (s < 1.0) return 'no signal';
+    if (s < 2.0) return 'weak signal';
+    if (s < 3.0) return 'moderate signal';
+    if (s < 4.5) return 'strong signal';
+    if (s < 6.0) return 'very strong';
+    return 'highest tier';
   }
 
-  // Company name lookup (the most common large-caps; extend over time)
+  // --------------- Plain-language thesis ---------------
   const COMPANY_NAMES = {
-    AAPL: 'Apple', MSFT: 'Microsoft', GOOGL: 'Alphabet', GOOG: 'Alphabet',
-    AMZN: 'Amazon', META: 'Meta Platforms', NVDA: 'NVIDIA', TSLA: 'Tesla',
-    BRK: 'Berkshire Hathaway', JPM: 'JPMorgan', V: 'Visa', MA: 'Mastercard',
-    UNH: 'UnitedHealth', JNJ: 'Johnson & Johnson', WMT: 'Walmart',
-    XOM: 'Exxon Mobil', PG: 'Procter & Gamble', HD: 'Home Depot',
-    CVX: 'Chevron', LLY: 'Eli Lilly', ABBV: 'AbbVie', MRK: 'Merck',
-    AVGO: 'Broadcom', PEP: 'PepsiCo', KO: 'Coca-Cola', COST: 'Costco',
-    BAC: 'Bank of America', PFE: 'Pfizer', TMO: 'Thermo Fisher',
-    CSCO: 'Cisco', ACN: 'Accenture', ABT: 'Abbott', LIN: 'Linde',
-    NFLX: 'Netflix', ADBE: 'Adobe', ORCL: 'Oracle', CRM: 'Salesforce',
-    NKE: 'Nike', DIS: 'Disney', WFC: 'Wells Fargo', AMD: 'AMD',
-    INTC: 'Intel', QCOM: 'Qualcomm', TXN: 'Texas Instruments',
-    INTU: 'Intuit', NOW: 'ServiceNow', AMAT: 'Applied Materials',
-    PYPL: 'PayPal', UBER: 'Uber', BKNG: 'Booking Holdings',
-    SBUX: 'Starbucks', MDT: 'Medtronic', LOW: 'Lowe\'s', TGT: 'Target',
-    UPS: 'UPS', FDX: 'FedEx', BA: 'Boeing', CAT: 'Caterpillar',
-    DE: 'Deere', GE: 'GE Aerospace', RTX: 'RTX', HON: 'Honeywell',
-    UNP: 'Union Pacific', LMT: 'Lockheed Martin', NOC: 'Northrop Grumman',
-    MU: 'Micron', SNPS: 'Synopsys', CDNS: 'Cadence', PANW: 'Palo Alto Networks',
-    CRWD: 'CrowdStrike', SNOW: 'Snowflake', MDB: 'MongoDB', NET: 'Cloudflare',
-    DDOG: 'Datadog', OKTA: 'Okta', ZS: 'Zscaler', S: 'SentinelOne',
-    PATH: 'UiPath', GTLB: 'GitLab', ESTC: 'Elastic', DELL: 'Dell',
-    HPE: 'HP Enterprise', NTAP: 'NetApp', MRVL: 'Marvell',
-    DLTR: 'Dollar Tree', DG: 'Dollar General', KR: 'Kroger',
-    LULU: 'Lululemon', RH: 'RH', GIS: 'General Mills', JD: 'JD.com',
-    BABA: 'Alibaba'
+    AAPL:'Apple', MSFT:'Microsoft', GOOGL:'Alphabet', GOOG:'Alphabet', AMZN:'Amazon',
+    META:'Meta', NVDA:'NVIDIA', TSLA:'Tesla', JPM:'JPMorgan', V:'Visa', MA:'Mastercard',
+    UNH:'UnitedHealth', JNJ:'Johnson & Johnson', WMT:'Walmart', XOM:'Exxon Mobil',
+    PG:'Procter & Gamble', HD:'Home Depot', CVX:'Chevron', LLY:'Eli Lilly', ABBV:'AbbVie',
+    MRK:'Merck', AVGO:'Broadcom', PEP:'PepsiCo', KO:'Coca-Cola', COST:'Costco',
+    BAC:'Bank of America', PFE:'Pfizer', TMO:'Thermo Fisher', CSCO:'Cisco', ACN:'Accenture',
+    ABT:'Abbott', LIN:'Linde', NFLX:'Netflix', ADBE:'Adobe', ORCL:'Oracle', CRM:'Salesforce',
+    NKE:'Nike', DIS:'Disney', WFC:'Wells Fargo', AMD:'AMD', INTC:'Intel', QCOM:'Qualcomm',
+    TXN:'Texas Instruments', INTU:'Intuit', NOW:'ServiceNow', AMAT:'Applied Materials',
+    PYPL:'PayPal', UBER:'Uber', BKNG:'Booking', SBUX:'Starbucks', MDT:'Medtronic',
+    LOW:"Lowe's", TGT:'Target', UPS:'UPS', FDX:'FedEx', BA:'Boeing', CAT:'Caterpillar',
+    DE:'Deere', GE:'GE Aerospace', RTX:'RTX', HON:'Honeywell', UNP:'Union Pacific',
+    LMT:'Lockheed Martin', NOC:'Northrop Grumman', MU:'Micron', SNPS:'Synopsys',
+    CDNS:'Cadence', PANW:'Palo Alto Networks', CRWD:'CrowdStrike', SNOW:'Snowflake',
+    MDB:'MongoDB', NET:'Cloudflare', DDOG:'Datadog', OKTA:'Okta', ZS:'Zscaler',
+    S:'SentinelOne', PATH:'UiPath', GTLB:'GitLab', ESTC:'Elastic', DELL:'Dell',
+    HPE:'HP Enterprise', NTAP:'NetApp', MRVL:'Marvell', DLTR:'Dollar Tree',
+    DG:'Dollar General', KR:'Kroger', LULU:'Lululemon', RH:'RH', GIS:'General Mills',
+    JD:'JD.com', BABA:'Alibaba'
   };
   const companyName = (tkr) => COMPANY_NAMES[tkr] || tkr;
 
-  // PM-readable thesis lines. Each maps a rule pattern to a plain-English
-  // explanation of what the engine is seeing and what it implies.
+  // Plain-English thesis lines for the hero card (longer form)
   function thesisLine(call) {
     const rules = (call._rules || '').split('|').filter(Boolean);
     const name = companyName(call.ticker);
 
     if (rules.includes('vol_compression_severe')) {
-      return `${name} has had several unusually quiet earnings prints in a row. The engine flags this as a coiled-spring setup: when the pattern breaks, the move tends to be larger than the recent calm suggests.`;
+      return `${name}'s last few earnings reports caused unusually small moves. When a stock has been calm into prints, the next surprise tends to be larger than the recent stillness suggests.`;
     }
     if (rules.includes('vol_compression_3q')) {
-      return `${name} has traded calmly into recent earnings. Quiet stretches like this often precede an outsized reaction once the streak ends.`;
+      return `${name} has had quiet earnings reports recently. Quiet stretches often precede an oversized reaction when the streak ends.`;
     }
     if (rules.includes('vol_saturation_extreme')) {
-      return `${name} has had repeated large reactions to recent earnings. The engine flags this as elevated risk of mean-reversion: the next print may be smaller than the recent prints have been.`;
+      return `${name}'s last few prints all produced big moves. After repeated large reactions, the next one often comes in smaller than the recent pattern.`;
     }
     if (rules.includes('vol_saturation_3q')) {
-      return `${name} has been moving more than its own history would predict. The pattern may continue, but the asymmetry is starting to look stretched.`;
+      return `${name} has been moving more than its own history would suggest. The pattern can continue, but it's stretched.`;
     }
     if (rules.includes('insider_meaningful_buy')) {
-      return `${name} insiders have purchased a material amount of stock on the open market ahead of this print. Excludes pre-planned 10b5-1 trades.`;
+      return `${name} executives have bought a meaningful amount of stock with their own money ahead of this report.`;
     }
     if (rules.includes('insider_meaningful_sell')) {
-      return `${name} insiders have sold a material amount of stock ahead of this print, beyond what their 10b5-1 plans explain.`;
+      return `${name} executives have sold meaningful amounts of stock beyond their pre-planned trading programs.`;
     }
     if (rules.includes('high_vol_baseline')) {
-      return `${name} historically moves substantially on earnings. No directional view, just a flag to size positions accordingly.`;
+      return `${name} historically moves a lot on earnings. No specific signal, just a flag that this name swings.`;
     }
     if (rules.includes('insider_silent') && rules.length <= 3) {
-      return `${name} shows no structural pre-print signals. The engine has no view; treat the print as a coin flip until something else surfaces.`;
+      return `${name} shows no unusual setup. The system has no read on this print.`;
     }
-    return `Several signals overlap on ${name}. Worth a closer look.`;
+    return `Multiple signals overlap on ${name}.`;
   }
 
+  // Short thesis for per-day rows
   function thesisShort(call) {
     const rules = (call._rules || '').split('|').filter(Boolean);
-    if (rules.includes('vol_compression_severe')) return 'Coiled-spring setup. A larger-than-usual move is increasingly likely.';
-    if (rules.includes('vol_compression_3q'))     return 'Has been quiet into recent prints. Watch for asymmetric reaction.';
-    if (rules.includes('vol_saturation_extreme')) return 'Repeatedly volatile into prints. Mean-reversion risk elevated.';
-    if (rules.includes('vol_saturation_3q'))      return 'Pattern of outsized prints. May continue but stretched.';
-    if (rules.includes('insider_meaningful_buy')) return 'Material insider buying ahead of print.';
-    if (rules.includes('insider_meaningful_sell'))return 'Material insider selling beyond 10b5-1 plans.';
-    if (rules.includes('high_vol_baseline'))      return 'Historically wide-moving name. Size accordingly.';
-    if (rules.includes('insider_silent') && rules.length <= 3) return 'No conviction. Engine has no view on this print.';
-    return 'Multiple signals worth a closer look.';
+    if (rules.includes('vol_compression_severe')) return 'Has been very quiet into recent prints. A larger-than-usual move is more likely than the calm suggests.';
+    if (rules.includes('vol_compression_3q'))     return 'Recent prints have been quiet. Watch for an oversized reaction.';
+    if (rules.includes('vol_saturation_extreme')) return 'Recent prints have all been big moves. May be due for a smaller one.';
+    if (rules.includes('vol_saturation_3q'))      return 'Has been moving a lot on recent prints. Pattern may continue but looks stretched.';
+    if (rules.includes('insider_meaningful_buy')) return 'Executives have been buying stock ahead of this report.';
+    if (rules.includes('insider_meaningful_sell'))return 'Executives have been selling beyond their pre-planned programs.';
+    if (rules.includes('high_vol_baseline'))      return 'Historically a wide-moving stock. No specific signal, just a flag.';
+    if (rules.includes('insider_silent') && rules.length <= 3) return 'No unusual setup. System has no read.';
+    return 'Several signals overlap.';
   }
 
   function signalsSummary(call) {
-    // Convert the technical rules-fired list into a human-readable signal count
     const rules = (call._rules || '').split('|').filter(Boolean);
     const meaningful = rules.filter(r => !['has_history', 'has_deep_history'].includes(r));
     if (meaningful.length === 0) return 'No active signals';
-    const labels = meaningful.map(r => {
-      const map = {
-        vol_compression_3q: 'compressed vol (3Q)',
-        vol_compression_severe: 'severe compression',
-        vol_saturation_3q: 'saturated vol (3Q)',
-        vol_saturation_extreme: 'extreme saturation',
-        high_vol_baseline: 'wide-moving baseline',
-        insider_meaningful_buy: 'insider buying',
-        insider_meaningful_sell: 'insider selling',
-        insider_cluster_buying: 'cluster buying',
-        insider_cluster_selling: 'cluster selling',
-        insider_silent: 'no insider activity',
-      };
-      return map[r] || r.replace(/_/g, ' ');
-    });
-    return labels.join(', ');
+    const map = {
+      vol_compression_3q: 'quiet recent prints',
+      vol_compression_severe: 'unusually calm',
+      vol_saturation_3q: 'big recent moves',
+      vol_saturation_extreme: 'repeated big moves',
+      high_vol_baseline: 'wide-moving stock',
+      insider_meaningful_buy: 'insider buying',
+      insider_meaningful_sell: 'insider selling',
+      insider_cluster_buying: 'multiple insiders buying',
+      insider_cluster_selling: 'multiple insiders selling',
+      insider_silent: 'no insider activity',
+    };
+    return meaningful.map(r => map[r] || r.replace(/_/g, ' ')).join(', ');
   }
 
-  // ============ Hero ============
+  // --------------- HERO ---------------
   function renderHero(pending) {
     const el = document.getElementById('hero');
     if (!pending.length) {
       el.classList.add('empty');
       el.innerHTML = `
         <div>
-          <div class="eyebrow">No active calls</div>
-          <div class="h1placeholder">The engine is between scans.</div>
+          <div class="eyebrow">No upcoming earnings flagged</div>
+          <div class="h1placeholder">The system is between scans.</div>
         </div>`;
       return;
     }
     const top = [...pending].sort((a, b) => (b.score || 0) - (a.score || 0))[0];
     const day = dayHeader(top.event_date);
     const eventLabel = day.badge ? `${day.badge}, ${day.dateLabel}` : `${day.dayName}, ${day.dateLabel}`;
+    const activeSignalCount = (top._rules || '').split('|').filter(r => r && !['has_history','has_deep_history'].includes(r)).length;
     el.innerHTML = `
       <div>
-        <div class="eyebrow">This morning's highest-conviction setup</div>
+        <div class="eyebrow">Strongest signal right now</div>
         <h1><span class="ticker">${top.ticker}</span> · ${companyName(top.ticker)}</h1>
         <div class="thesis">${thesisLine(top)}</div>
         <div class="meta-row">
-          <span>Reporting<strong>${eventLabel}</strong></span>
-          <span>Typical move<strong>${fmtBase(top.trailing_baseline_pct)}</strong></span>
-          <span>Active signals<strong>${(top._rules || '').split('|').filter(r => r && !['has_history','has_deep_history'].includes(r)).length}</strong></span>
+          <span>Reports<strong>${eventLabel}</strong></span>
+          <span>Usual move<strong>${fmtBase(top.trailing_baseline_pct)}</strong></span>
+          <span>Signals active<strong>${activeSignalCount}</strong></span>
         </div>
       </div>
       <div class="score-block">
         <div class="scorenum">${(top.score || 0).toFixed(1)}</div>
-        <div class="scorelabel">Conviction · ${convictionLabel(top.score)}</div>
+        <div class="scorelabel">${convictionLabel(top.score)}</div>
       </div>
     `;
   }
 
-  // ============ KPIs ============
+  // --------------- KPIs ---------------
   function renderKPIs(calls) {
     const pending  = calls.filter(c => c.outcome === 'PENDING').length;
     const hits     = calls.filter(c => c.outcome === 'HIT').length;
     const misses   = calls.filter(c => c.outcome === 'MISS').length;
     const resolved = hits + misses;
-    const rate     = resolved > 0 ? hits / resolved * 100 : null;
     const lastTs   = calls.map(c => c.timestamp).filter(Boolean).sort().pop();
 
     document.getElementById('kpi-pending').textContent = pending;
-    document.getElementById('kpi-pending-sub').textContent = pending === 1 ? 'awaiting outcome' : 'awaiting outcomes';
+    document.getElementById('kpi-pending-sub').textContent = pending === 1 ? 'reporting in next 14 days' : 'reporting in next 14 days';
 
     document.getElementById('kpi-record').textContent =
       resolved === 0 ? '—' : `${hits} / ${resolved}`;
     document.getElementById('kpi-record-sub').textContent =
-      resolved === 0 ? 'first resolution pending' : (rate != null ? rate.toFixed(0) + '% hit rate' : '');
+      resolved === 0 ? 'first reports pending' : 'hits / total resolved';
 
     if (resolved >= 30) {
-      document.getElementById('kpi-confidence').textContent = 'live';
-      document.getElementById('kpi-confidence-sub').textContent = 'weights trusted';
+      document.getElementById('kpi-confidence').textContent = 'ready';
+      document.getElementById('kpi-confidence-sub').textContent = 'enough results to evaluate';
     } else {
       const pct = Math.round(resolved / 30 * 100);
       document.getElementById('kpi-confidence').textContent = pct + '%';
-      document.getElementById('kpi-confidence-sub').textContent = (30 - resolved) + ' to reach N = 30';
+      document.getElementById('kpi-confidence-sub').textContent = (30 - resolved) + ' more results needed';
     }
 
     document.getElementById('last-scan').textContent = relTime(lastTs);
   }
 
-  // ============ Day-grouped upcoming ============
+  // --------------- Day-grouped upcoming ---------------
   function renderUpcoming(pending) {
     const container = document.getElementById('upcoming-container');
     const meta = document.getElementById('upcoming-meta');
@@ -1006,14 +971,13 @@
     if (!pending.length) {
       container.innerHTML = `
         <div class="glass empty">
-          <div class="label">No upcoming calls in the next 14 days</div>
-          <div class="desc">The next scheduled scan will run on the next weekday morning at 09:00 ET.</div>
+          <div class="label">No upcoming earnings flagged in the next 14 days</div>
+          <div class="desc">The next scheduled scan will run on the next weekday morning.</div>
         </div>`;
-      meta.textContent = '0 calls';
+      meta.textContent = '0 companies';
       return;
     }
 
-    // Group by event_date, sort days asc, calls within day by score desc
     const byDay = new Map();
     for (const c of pending) {
       if (!byDay.has(c.event_date)) byDay.set(c.event_date, []);
@@ -1024,7 +988,7 @@
       byDay.get(d).sort((a, b) => (b.score || 0) - (a.score || 0));
     }
 
-    meta.textContent = `${pending.length} calls across ${sortedDays.length} session${sortedDays.length === 1 ? '' : 's'}`;
+    meta.textContent = `${pending.length} companies across ${sortedDays.length} session${sortedDays.length === 1 ? '' : 's'}`;
 
     container.innerHTML = sortedDays.map(d => {
       const h = dayHeader(d);
@@ -1058,14 +1022,14 @@
     }).join('');
   }
 
-  // ============ Track record table ============
+  // --------------- Track record table ---------------
   function renderRecord(resolved) {
     const container = document.getElementById('record-container');
     if (!resolved.length) {
       container.innerHTML = `
         <div class="empty">
-          <div class="label">No resolved calls yet</div>
-          <div class="desc">The first calls will be resolved the morning after their event date. Track record builds from there.</div>
+          <div class="label">No past predictions resolved yet</div>
+          <div class="desc">Once a company reports, we check what actually happened and record the outcome here. The first results will appear after this week's earnings reports settle.</div>
         </div>`;
       return;
     }
@@ -1077,18 +1041,19 @@
         <thead>
           <tr>
             <th>Ticker</th>
-            <th>Event</th>
-            <th class="num">Score</th>
-            <th class="num">Realized</th>
-            <th class="num">Baseline</th>
-            <th class="num">Ratio</th>
-            <th>Outcome</th>
+            <th>Reported</th>
+            <th class="num">Our score</th>
+            <th class="num">Actual move</th>
+            <th class="num">Usual move</th>
+            <th class="num">Bigger than usual?</th>
+            <th>Result</th>
           </tr>
         </thead>
         <tbody>
           ${sorted.map(c => {
             const cls = (c.outcome || '').toLowerCase();
             const outClass = cls === 'hit' ? 'hit' : cls === 'miss' ? 'miss' : 'inv';
+            const outLabel = c.outcome === 'HIT' ? 'Hit' : c.outcome === 'MISS' ? 'Miss' : 'No data';
             const d = new Date(c.event_date + 'T12:00:00');
             const ev = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             return `
@@ -1099,7 +1064,7 @@
                 <td class="num">${fmtPct(c.realized_move_pct)}</td>
                 <td class="num">${fmtBase(c.trailing_baseline_pct)}</td>
                 <td class="num">${c.move_ratio != null ? c.move_ratio.toFixed(2) + 'x' : '—'}</td>
-                <td><span class="out ${outClass}">${c.outcome}</span></td>
+                <td><span class="out ${outClass}">${outLabel}</span></td>
               </tr>`;
           }).join('')}
         </tbody>
@@ -1107,13 +1072,13 @@
     `;
   }
 
-  // ============ Live bucket chart ============
+  // --------------- Live bucket chart ---------------
   function renderLiveBuckets(calls) {
     const el = document.getElementById('live-buckets');
     const resolved = calls.filter(c => c.outcome === 'HIT' || c.outcome === 'MISS');
     if (!resolved.length) {
       el.innerHTML = `<div style="font-size:12px;color:var(--ink-3);line-height:1.55;padding:6px 0;">
-        Live performance fills in as calls resolve. First data point will appear the morning after the earliest pending call's event date.
+        Live results fill in as companies report and outcomes are recorded. First data will appear after the earliest upcoming earnings date.
       </div>`;
       return;
     }
@@ -1138,7 +1103,7 @@
     }).join('');
   }
 
-  // ============ Load ============
+  // --------------- Load ---------------
   async function load() {
     try {
       let txt;
@@ -1176,7 +1141,7 @@
       document.getElementById('hero').innerHTML = `
         <div>
           <div class="eyebrow">Could not load data</div>
-          <div class="h1placeholder">Check that live_log/calls.csv is accessible.</div>
+          <div class="h1placeholder">Check that the data file is accessible.</div>
         </div>`;
     }
   }
